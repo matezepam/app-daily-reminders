@@ -1,0 +1,27 @@
+spring:
+  application:
+    name: daily-reminder-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/daily_reminder}
+    username: ${DB_USER:postgres}
+    password: ${DB_PASSWORD:postgres}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+  flyway:
+    enabled: true
+
+server:
+  port: ${PORT:8080}
+
+app:
+  security:
+    mock-enabled: ${MOCK_AUTH:true}
+    cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://127.0.0.1:3000,http://localhost:8081,http://127.0.0.1:8081}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
