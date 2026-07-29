@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Daily Reminder",
+    "slug": "daily-reminder",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "dailyreminder",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "ec.edu.puce.dailyreminder"
+    },
+    "android": {
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
