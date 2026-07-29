@@ -60,6 +60,30 @@ Resources:
       WriteAttributes:
         - email
 
+  StudentGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: STUDENT
+      Description: Students who manage personal and course reminders
+      Precedence: 30
+      UserPoolId: !Ref DailyReminderUserPool
+
+  TeacherGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: TEACHER
+      Description: Teachers who create courses and publish activities
+      Precedence: 20
+      UserPoolId: !Ref DailyReminderUserPool
+
+  AdminGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: ADMIN
+      Description: Administrators with full platform access
+      Precedence: 10
+      UserPoolId: !Ref DailyReminderUserPool
+
 Outputs:
   AwsRegion:
     Value: !Ref AWS::Region

@@ -63,6 +63,39 @@ COGNITO_CLIENT_SECRET=
 }
 ```
 
+## JWT authorization
+
+Private endpoints require the Cognito access token in the authorization header:
+
+```text
+Authorization: Bearer access-token
+```
+
+The API validates the signature, expiration, issuer, `token_use` and `client_id` claims. Cognito groups are mapped to the `STUDENT`, `TEACHER` and `ADMIN` roles.
+
+Read the authenticated session:
+
+```text
+GET /api/v1/session
+```
+
+Assign a user to a role:
+
+```powershell
+aws cognito-idp admin-add-user-to-group `
+  --user-pool-id generated-user-pool-id `
+  --username student@example.com `
+  --group-name STUDENT
+```
+
+Role-protected route prefixes:
+
+```text
+/api/v1/student/**  STUDENT or ADMIN
+/api/v1/teacher/**  TEACHER or ADMIN
+/api/v1/admin/**    ADMIN
+```
+
 ## Tests
 
 ```powershell
