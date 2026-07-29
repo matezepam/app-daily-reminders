@@ -10,6 +10,8 @@ export const colors = {
   muted: '#617897',
   navy: '#092E69',
   placeholder: '#8293AA',
+  success: '#168548',
+  successPale: '#EAF8F0',
   text: '#16345C',
   waveLight: '#BDD8FF',
   white: '#FFFFFF',

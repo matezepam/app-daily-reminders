@@ -1,10 +1,12 @@
 import { Brand } from '@/src/components/Brand';
 import { AuthField } from '@/src/components/AuthField';
+import { useAuth } from '@/src/context/AuthContext';
 import { colors, shadow } from '@/src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -17,13 +19,14 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
+  const { busy, clearError, error, initializing, session, signIn, signOut } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
 
-  function validateForm() {
+  async function submitForm() {
     const normalizedEmail = email.trim();
     const nextEmailError = !normalizedEmail
       ? 'Email is required'
@@ -39,9 +42,19 @@ export default function LoginScreen() {
     setEmailError(nextEmailError);
     setPasswordError(nextPasswordError);
 
-    if (!nextEmailError && !nextPasswordError) {
-      Keyboard.dismiss();
-    }
+    if (nextEmailError || nextPasswordError) return;
+
+    Keyboard.dismiss();
+    await signIn(normalizedEmail, password).catch(() => undefined);
+  }
+
+  if (initializing) {
+    return (
+      <SafeAreaView style={styles.loadingPage}>
+        <ActivityIndicator color={colors.blue} size="large" />
+        <Text style={styles.loadingText}>Restoring your session...</Text>
+      </SafeAreaView>
+    );
   }
 
   return (
@@ -65,7 +78,38 @@ export default function LoginScreen() {
               <Text style={styles.subtitle}>Sign in to organize your academic life</Text>
             </View>
 
-            <View style={styles.card}>
+            {session ? (
+              <View style={[styles.card, styles.authenticatedCard]}>
+                <View style={styles.authenticatedIcon}>
+                  <Ionicons color={colors.success} name="checkmark-circle-outline" size={42} />
+                </View>
+                <Text style={styles.authenticatedTitle}>Authentication successful</Text>
+                <Text style={styles.authenticatedEmail}>{session.email}</Text>
+                <Text style={styles.authenticatedText}>
+                  Your secure Cognito session is active on this device.
+                </Text>
+                <Pressable
+                  accessibilityRole="button"
+                  disabled={busy}
+                  onPress={() => void signOut()}
+                  style={({ pressed }) => [
+                    styles.logoutButton,
+                    pressed && styles.loginButtonPressed,
+                    busy && styles.disabledButton,
+                  ]}
+                >
+                  {busy ? (
+                    <ActivityIndicator color={colors.blue} />
+                  ) : (
+                    <>
+                      <Ionicons color={colors.blue} name="log-out-outline" size={22} />
+                      <Text style={styles.logoutText}>Sign Out</Text>
+                    </>
+                  )}
+                </Pressable>
+              </View>
+            ) : (
+              <View style={styles.card}>
               <AuthField
                 autoCapitalize="none"
                 autoComplete="email"
@@ -76,6 +120,7 @@ export default function LoginScreen() {
                 onChangeText={(value) => {
                   setEmail(value);
                   if (emailError) setEmailError('');
+                  if (error) clearError();
                 }}
                 placeholder="student@university.edu"
                 value={email}
@@ -90,6 +135,7 @@ export default function LoginScreen() {
                 onChangeText={(value) => {
                   setPassword(value);
                   if (passwordError) setPasswordError('');
+                  if (error) clearError();
                 }}
                 onToggleSecure={() => setPasswordVisible((current) => !current)}
                 placeholder="Enter your password"
@@ -101,10 +147,22 @@ export default function LoginScreen() {
                 <Text style={styles.forgotText}>Forgot your password?</Text>
               </Pressable>
 
+              {error ? (
+                <View accessibilityRole="alert" style={styles.apiError}>
+                  <Ionicons color={colors.danger} name="alert-circle-outline" size={21} />
+                  <Text style={styles.apiErrorText}>{error}</Text>
+                </View>
+              ) : null}
+
               <Pressable
                 accessibilityRole="button"
-                onPress={validateForm}
-                style={({ pressed }) => [styles.loginButton, pressed && styles.loginButtonPressed]}
+                disabled={busy}
+                onPress={() => void submitForm()}
+                style={({ pressed }) => [
+                  styles.loginButton,
+                  pressed && styles.loginButtonPressed,
+                  busy && styles.disabledButton,
+                ]}
               >
                 <LinearGradient
                   colors={[colors.blue, colors.blueDark]}
@@ -112,8 +170,14 @@ export default function LoginScreen() {
                   start={{ x: 0, y: 0 }}
                   style={styles.loginGradient}
                 >
-                  <Ionicons color={colors.white} name="log-in-outline" size={24} />
-                  <Text style={styles.loginText}>Sign In</Text>
+                  {busy ? (
+                    <ActivityIndicator color={colors.white} />
+                  ) : (
+                    <>
+                      <Ionicons color={colors.white} name="log-in-outline" size={24} />
+                      <Text style={styles.loginText}>Sign In</Text>
+                    </>
+                  )}
                 </LinearGradient>
               </Pressable>
 
@@ -126,7 +190,8 @@ export default function LoginScreen() {
                   <Text style={styles.securityText}>Your information is protected by Cognito</Text>
                 </View>
               </View>
-            </View>
+              </View>
+            )}
           </View>
         </ScrollView>
         <View pointerEvents="none" style={styles.waveLight} />
@@ -144,6 +209,17 @@ const styles = StyleSheet.create({
   keyboardView: {
     flex: 1,
     overflow: 'hidden',
+  },
+  loadingPage: {
+    alignItems: 'center',
+    backgroundColor: colors.background,
+    flex: 1,
+    gap: 14,
+    justifyContent: 'center',
+  },
+  loadingText: {
+    color: colors.muted,
+    fontSize: 15,
   },
   scrollContent: {
     flexGrow: 1,
@@ -189,6 +265,68 @@ const styles = StyleSheet.create({
     padding: 24,
     ...shadow,
   },
+  apiError: {
+    alignItems: 'center',
+    backgroundColor: '#FFF1F0',
+    borderRadius: 12,
+    flexDirection: 'row',
+    gap: 9,
+    marginTop: -4,
+    padding: 12,
+  },
+  apiErrorText: {
+    color: colors.danger,
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  authenticatedCard: {
+    alignItems: 'center',
+    paddingVertical: 34,
+  },
+  authenticatedIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.successPale,
+    borderRadius: 34,
+    height: 68,
+    justifyContent: 'center',
+    width: 68,
+  },
+  authenticatedTitle: {
+    color: colors.navy,
+    fontSize: 22,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  authenticatedEmail: {
+    color: colors.blue,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  authenticatedText: {
+    color: colors.muted,
+    fontSize: 14,
+    lineHeight: 21,
+    maxWidth: 310,
+    textAlign: 'center',
+  },
+  logoutButton: {
+    alignItems: 'center',
+    borderColor: colors.blue,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    flexDirection: 'row',
+    gap: 9,
+    justifyContent: 'center',
+    marginTop: 10,
+    minHeight: 52,
+    width: '100%',
+  },
+  logoutText: {
+    color: colors.blue,
+    fontSize: 16,
+    fontWeight: '700',
+  },
   forgotButton: {
     alignSelf: 'flex-end',
     marginTop: -8,
@@ -207,6 +345,9 @@ const styles = StyleSheet.create({
   loginButtonPressed: {
     opacity: 0.86,
     transform: [{ scale: 0.995 }],
+  },
+  disabledButton: {
+    opacity: 0.7,
   },
   loginGradient: {
     alignItems: 'center',
