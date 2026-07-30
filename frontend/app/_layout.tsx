@@ -24,6 +24,7 @@ function RootNavigator() {
       </Stack.Protected>
       <Stack.Protected guard={Boolean(session)}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="course/join" />
         <Stack.Screen name="course/new" />
       </Stack.Protected>
     </Stack>
