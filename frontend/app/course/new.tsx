@@ -1,9 +1,12 @@
+import { ApiClientError, postAuthenticatedJson } from '@/src/api/client';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, shadow } from '@/src/theme';
+import type { Course } from '@/src/types/auth';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -19,7 +22,40 @@ export default function CreateCourseScreen() {
   const { session } = useAuth();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [createdCourse, setCreatedCourse] = useState<Course | null>(null);
   const canCreate = session?.roles?.some((role) => role === 'TEACHER' || role === 'ADMIN');
+
+  async function submit() {
+    const normalizedName = name.trim();
+    if (!normalizedName || !session || !canCreate) return;
+
+    setBusy(true);
+    setError('');
+    try {
+      const course = await postAuthenticatedJson<
+        Course,
+        { description?: string; name: string }
+      >(
+        '/courses',
+        {
+          name: normalizedName,
+          ...(description.trim() ? { description: description.trim() } : {}),
+        },
+        session.accessToken,
+      );
+      setCreatedCourse(course);
+    } catch (requestError) {
+      setError(
+        requestError instanceof ApiClientError
+          ? requestError.message
+          : 'No se pudo crear la clase. Inténtalo nuevamente.',
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -41,6 +77,24 @@ export default function CreateCourseScreen() {
                 <Ionicons color={colors.danger} name="lock-closed-outline" size={34} />
                 <Text style={styles.deniedTitle}>Acceso exclusivo para profesores</Text>
                 <Text style={styles.deniedText}>Tu cuenta no tiene permiso para crear clases.</Text>
+              </View>
+            ) : createdCourse ? (
+              <View style={styles.successCard}>
+                <View style={styles.successIcon}>
+                  <Ionicons color={colors.success} name="checkmark-circle-outline" size={44} />
+                </View>
+                <Text style={styles.successTitle}>¡Clase creada!</Text>
+                <Text style={styles.successText}>{createdCourse.name}</Text>
+                <Text style={styles.codeLabel}>Código para estudiantes</Text>
+                <View style={styles.codeBox}>
+                  <Ionicons color={colors.blue} name="key-outline" size={24} />
+                  <Text selectable style={styles.code}>{createdCourse.joinCode}</Text>
+                </View>
+                <Text style={styles.codeHelp}>Comparte este código para que tus estudiantes puedan unirse.</Text>
+                <Pressable onPress={() => router.replace('/(tabs)' as never)} style={styles.submitButton}>
+                  <Ionicons color={colors.white} name="home-outline" size={22} />
+                  <Text style={styles.submitText}>Volver al inicio</Text>
+                </Pressable>
               </View>
             ) : (
               <View style={styles.card}>
@@ -89,16 +143,30 @@ export default function CreateCourseScreen() {
                   </Text>
                 </View>
 
+                {error ? (
+                  <View accessibilityRole="alert" style={styles.errorBox}>
+                    <Ionicons color={colors.danger} name="alert-circle-outline" size={21} />
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                ) : null}
+
                 <Pressable
-                  disabled={!name.trim()}
+                  disabled={!name.trim() || busy}
+                  onPress={() => void submit()}
                   style={({ pressed }) => [
                     styles.submitButton,
-                    !name.trim() && styles.submitDisabled,
+                    (!name.trim() || busy) && styles.submitDisabled,
                     pressed && styles.submitPressed,
                   ]}
                 >
-                  <Ionicons color={colors.white} name="add-circle-outline" size={23} />
-                  <Text style={styles.submitText}>Crear clase</Text>
+                  {busy ? (
+                    <ActivityIndicator color={colors.white} />
+                  ) : (
+                    <>
+                      <Ionicons color={colors.white} name="add-circle-outline" size={23} />
+                      <Text style={styles.submitText}>Crear clase</Text>
+                    </>
+                  )}
                 </Pressable>
               </View>
             )}
@@ -197,4 +265,49 @@ const styles = StyleSheet.create({
   },
   deniedTitle: { color: colors.navy, fontSize: 18, fontWeight: '800', textAlign: 'center' },
   deniedText: { color: colors.muted, fontSize: 14, textAlign: 'center' },
+  errorBox: {
+    alignItems: 'center',
+    backgroundColor: '#FFF0EE',
+    borderRadius: 13,
+    flexDirection: 'row',
+    gap: 9,
+    padding: 12,
+  },
+  errorText: { color: colors.danger, flex: 1, fontSize: 13, lineHeight: 18 },
+  successCard: {
+    alignItems: 'center',
+    backgroundColor: colors.white,
+    borderColor: colors.lineSoft,
+    borderRadius: 26,
+    borderWidth: 1,
+    gap: 13,
+    padding: 26,
+    ...shadow,
+  },
+  successIcon: {
+    alignItems: 'center',
+    backgroundColor: colors.successPale,
+    borderRadius: 32,
+    height: 64,
+    justifyContent: 'center',
+    width: 64,
+  },
+  successTitle: { color: colors.navy, fontSize: 24, fontWeight: '800' },
+  successText: { color: colors.muted, fontSize: 16, textAlign: 'center' },
+  codeLabel: { color: colors.text, fontSize: 13, fontWeight: '700', marginTop: 8 },
+  codeBox: {
+    alignItems: 'center',
+    backgroundColor: colors.bluePale,
+    borderColor: colors.blueSoft,
+    borderRadius: 16,
+    borderWidth: 1,
+    flexDirection: 'row',
+    gap: 11,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    width: '100%',
+  },
+  code: { color: colors.blue, fontSize: 25, fontWeight: '900', letterSpacing: 2 },
+  codeHelp: { color: colors.muted, fontSize: 13, lineHeight: 19, marginBottom: 5, textAlign: 'center' },
 });
