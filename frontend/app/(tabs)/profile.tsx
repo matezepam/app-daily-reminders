@@ -8,6 +8,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 export default function ProfileScreen() {
   const { busy, session, signOut } = useAuth();
 
+  async function logout() {
+    await signOut();
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.page}>
@@ -20,7 +24,7 @@ export default function ProfileScreen() {
           <RoleBadge roles={session?.roles} />
           <Pressable
             disabled={busy}
-            onPress={() => void signOut()}
+            onPress={() => void logout()}
             style={({ pressed }) => [styles.logout, pressed && { opacity: 0.76 }, busy && { opacity: 0.55 }]}
           >
             {busy ? <ActivityIndicator color={colors.danger} /> : <Ionicons color={colors.danger} name="log-out-outline" size={21} />}

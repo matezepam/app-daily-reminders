@@ -4,7 +4,6 @@ import { useAuth } from '@/src/context/AuthContext';
 import { colors, shadow } from '@/src/theme';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Redirect } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -20,7 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
-  const { busy, clearError, error, initializing, session, signIn } = useAuth();
+  const { busy, clearError, error, initializing, signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -57,8 +56,6 @@ export default function LoginScreen() {
       </SafeAreaView>
     );
   }
-
-  if (session) return <Redirect href="/(tabs)" />;
 
   return (
     <SafeAreaView style={styles.safeArea}>
