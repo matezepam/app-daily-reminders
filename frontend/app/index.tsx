@@ -19,7 +19,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function LoginScreen() {
-  const { busy, clearError, error, initializing, session, signIn, signOut } = useAuth();
+  const { busy, clearError, error, initializing, signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
@@ -78,38 +78,7 @@ export default function LoginScreen() {
               <Text style={styles.subtitle}>Sign in to organize your academic life</Text>
             </View>
 
-            {session ? (
-              <View style={[styles.card, styles.authenticatedCard]}>
-                <View style={styles.authenticatedIcon}>
-                  <Ionicons color={colors.success} name="checkmark-circle-outline" size={42} />
-                </View>
-                <Text style={styles.authenticatedTitle}>Authentication successful</Text>
-                <Text style={styles.authenticatedEmail}>{session.email}</Text>
-                <Text style={styles.authenticatedText}>
-                  Your secure Cognito session is active on this device.
-                </Text>
-                <Pressable
-                  accessibilityRole="button"
-                  disabled={busy}
-                  onPress={() => void signOut()}
-                  style={({ pressed }) => [
-                    styles.logoutButton,
-                    pressed && styles.loginButtonPressed,
-                    busy && styles.disabledButton,
-                  ]}
-                >
-                  {busy ? (
-                    <ActivityIndicator color={colors.blue} />
-                  ) : (
-                    <>
-                      <Ionicons color={colors.blue} name="log-out-outline" size={22} />
-                      <Text style={styles.logoutText}>Sign Out</Text>
-                    </>
-                  )}
-                </Pressable>
-              </View>
-            ) : (
-              <View style={styles.card}>
+            <View style={styles.card}>
               <AuthField
                 autoCapitalize="none"
                 autoComplete="email"
@@ -190,8 +159,7 @@ export default function LoginScreen() {
                   <Text style={styles.securityText}>Your information is protected by Cognito</Text>
                 </View>
               </View>
-              </View>
-            )}
+            </View>
           </View>
         </ScrollView>
         <View pointerEvents="none" style={styles.waveLight} />
