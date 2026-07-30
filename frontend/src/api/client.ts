@@ -79,3 +79,43 @@ export async function getSessionIdentity(accessToken: string): Promise<SessionId
     clearTimeout(timeout);
   }
 }
+
+export async function postAuthenticatedJson<TResponse, TBody>(
+  path: string,
+  body: TBody,
+  accessToken: string,
+): Promise<TResponse> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+
+  try {
+    const response = await fetch(`${apiUrl}${path}`, {
+      body: JSON.stringify(body),
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      method: 'POST',
+      signal: controller.signal,
+    });
+    const payload = (await response.json().catch(() => null)) as TResponse | ApiErrorResponse | null;
+
+    if (!response.ok) {
+      throw new ApiClientError(
+        (payload as ApiErrorResponse | null)?.message ?? 'No se pudo crear la clase.',
+        response.status,
+      );
+    }
+
+    return payload as TResponse;
+  } catch (error) {
+    if (error instanceof ApiClientError) throw error;
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new ApiClientError('El servidor tardó demasiado en responder.', 408);
+    }
+    throw new ApiClientError('No se pudo conectar con Daily Reminder.', 0);
+  } finally {
+    clearTimeout(timeout);
+  }
+}

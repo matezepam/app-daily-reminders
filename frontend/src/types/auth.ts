@@ -25,3 +25,12 @@ export type AuthSession = AuthenticationResponse & {
 export type ApiErrorResponse = {
   message?: string;
 };
+
+export type Course = {
+  createdAt: string;
+  description?: string | null;
+  id: number;
+  joinCode: string;
+  name: string;
+  ownerUserId: string;
+};
