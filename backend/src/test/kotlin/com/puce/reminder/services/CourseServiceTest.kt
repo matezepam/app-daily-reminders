@@ -71,4 +71,18 @@ class CourseServiceTest {
         assertEquals(9L, result.id)
         verify(memberships).save(any(CourseMembership::class.java))
     }
+
+    @Test
+    fun `lists owned and joined courses without duplicates`() {
+        val owned = Course(id = 1L, name = "Matematicas", joinCode = "MAT-82KLM", ownerUserId = "teacher-id")
+        val joined = Course(id = 2L, name = "Fisica", joinCode = "FIS-82KLM", ownerUserId = "other-teacher")
+        `when`(courses.findAllByOwnerUserIdOrderByCreatedAtDesc("teacher-id")).thenReturn(listOf(owned))
+        `when`(memberships.findAllByStudentUserIdOrderByJoinedAtDesc("teacher-id")).thenReturn(
+            listOf(CourseMembership(course = joined, studentUserId = "teacher-id")),
+        )
+
+        val result = service.mine()
+
+        assertEquals(listOf(1L, 2L), result.map { course -> course.id })
+    }
 }
