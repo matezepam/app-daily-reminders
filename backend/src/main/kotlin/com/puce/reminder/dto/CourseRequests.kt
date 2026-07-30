@@ -11,3 +11,9 @@ data class CourseCreateRequest(
     @field:Size(max = 255)
     val description: String? = null,
 )
+
+data class JoinCourseRequest(
+    @field:NotBlank
+    @field:Size(max = 20)
+    val code: String,
+)

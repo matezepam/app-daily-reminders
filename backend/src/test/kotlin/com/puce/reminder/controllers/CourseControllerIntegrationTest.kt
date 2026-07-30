@@ -1,5 +1,9 @@
 package com.puce.reminder.controllers
 
+import com.puce.reminder.entities.Course
+import com.puce.reminder.repositories.CourseMembershipRepository
+import com.puce.reminder.repositories.CourseRepository
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -29,6 +33,8 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional
 class CourseControllerIntegrationTest(
     @Autowired private val mockMvc: MockMvc,
+    @Autowired private val courses: CourseRepository,
+    @Autowired private val memberships: CourseMembershipRepository,
 ) {
     @Test
     fun `teacher creates a course with a unique join code`() {
@@ -60,5 +66,60 @@ class CourseControllerIntegrationTest(
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"name":"Curso no permitido"}"""),
         ).andExpect(status().isForbidden)
+    }
+
+    @Test
+    fun `student joins a course using its code`() {
+        val course = courses.save(
+            Course(name = "Fisica", joinCode = "FIS-82KLM", ownerUserId = "teacher-id"),
+        )
+
+        mockMvc.perform(
+            post("/api/v1/courses/join")
+                .with(
+                    jwt()
+                        .jwt { token -> token.subject("student-id") }
+                        .authorities(SimpleGrantedAuthority("ROLE_STUDENT")),
+                )
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"code":"fis-82klm"}"""),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(course.id))
+            .andExpect(jsonPath("$.joinCode").value("FIS-82KLM"))
+
+        assertTrue(memberships.existsByCourseIdAndStudentUserId(requireNotNull(course.id), "student-id"))
+    }
+
+    @Test
+    fun `student cannot join the same course twice`() {
+        courses.save(Course(name = "Quimica", joinCode = "QUI-92KLM", ownerUserId = "teacher-id"))
+        val request = post("/api/v1/courses/join")
+            .with(
+                jwt()
+                    .jwt { token -> token.subject("student-id") }
+                    .authorities(SimpleGrantedAuthority("ROLE_STUDENT")),
+            )
+            .contentType(MediaType.APPLICATION_JSON)
+            .content("""{"code":"QUI-92KLM"}""")
+
+        mockMvc.perform(request).andExpect(status().isOk)
+        mockMvc.perform(request)
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.message").value("Ya perteneces a esta clase"))
+    }
+
+    @Test
+    fun `unknown course code returns not found`() {
+        mockMvc.perform(
+            post("/api/v1/courses/join")
+                .with(
+                    jwt()
+                        .jwt { token -> token.subject("student-id") }
+                        .authorities(SimpleGrantedAuthority("ROLE_STUDENT")),
+                )
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"code":"XXX-99999"}"""),
+        ).andExpect(status().isNotFound)
     }
 }

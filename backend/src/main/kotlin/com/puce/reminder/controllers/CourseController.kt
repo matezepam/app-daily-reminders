@@ -2,6 +2,7 @@ package com.puce.reminder.controllers
 
 import com.puce.reminder.dto.CourseCreateRequest
 import com.puce.reminder.dto.CourseResponse
+import com.puce.reminder.dto.JoinCourseRequest
 import com.puce.reminder.services.CourseService
 import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
@@ -19,4 +20,8 @@ class CourseController(private val courseService: CourseService) {
     @ResponseStatus(HttpStatus.CREATED)
     @PreAuthorize("hasAnyRole('TEACHER', 'ADMIN')")
     fun create(@Valid @RequestBody request: CourseCreateRequest): CourseResponse = courseService.create(request)
+
+    @PostMapping("/join")
+    @PreAuthorize("hasRole('STUDENT')")
+    fun join(@Valid @RequestBody request: JoinCourseRequest): CourseResponse = courseService.join(request.code)
 }
