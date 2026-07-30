@@ -8,5 +8,7 @@ data class CourseResponse(
     val description: String?,
     val joinCode: String,
     val ownerUserId: String,
+    val memberCount: Long,
     val createdAt: Instant,
+    val ownedByMe: Boolean,
 )

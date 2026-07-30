@@ -35,6 +35,14 @@ class CourseService(
         return course.toResponse()
     }
 
+    @Transactional(readOnly = true)
+    fun mine(): List<CourseResponse> {
+        val userId = currentUser.id()
+        val owned = courses.findAllByOwnerUserIdOrderByCreatedAtDesc(userId)
+        val joined = memberships.findAllByStudentUserIdOrderByJoinedAtDesc(userId).map { membership -> membership.course }
+        return (owned + joined).distinctBy { course -> course.id }.map { course -> course.toResponse() }
+    }
+
     @Transactional
     fun join(rawCode: String): CourseResponse {
         val studentUserId = currentUser.id()
@@ -79,7 +87,9 @@ class CourseService(
         description = description,
         joinCode = joinCode,
         ownerUserId = ownerUserId,
+        memberCount = memberships.countByCourseId(requireNotNull(id)),
         createdAt = createdAt,
+        ownedByMe = ownerUserId == currentUser.id(),
     )
 
     private companion object {

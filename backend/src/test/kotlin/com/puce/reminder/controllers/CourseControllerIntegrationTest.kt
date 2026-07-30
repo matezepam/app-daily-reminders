@@ -13,6 +13,7 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.transaction.annotation.Transactional
@@ -121,5 +122,36 @@ class CourseControllerIntegrationTest(
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("""{"code":"XXX-99999"}"""),
         ).andExpect(status().isNotFound)
+    }
+
+    @Test
+    fun `user lists owned and joined courses`() {
+        courses.save(Course(name = "Algebra", joinCode = "ALG-82KLM", ownerUserId = "teacher-id"))
+        val joinedCourse = courses.save(Course(name = "Biologia", joinCode = "BIO-82KLM", ownerUserId = "other-teacher"))
+
+        mockMvc.perform(
+            post("/api/v1/courses/join")
+                .with(
+                    jwt()
+                        .jwt { token -> token.subject("teacher-id") }
+                        .authorities(SimpleGrantedAuthority("ROLE_STUDENT")),
+                )
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"code":"BIO-82KLM"}"""),
+        ).andExpect(status().isOk)
+
+        mockMvc.perform(
+            get("/api/v1/courses/me")
+                .with(
+                    jwt()
+                        .jwt { token -> token.subject("teacher-id") }
+                        .authorities(SimpleGrantedAuthority("ROLE_TEACHER")),
+                ),
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].name").value("Algebra"))
+            .andExpect(jsonPath("$[0].ownedByMe").value(true))
+            .andExpect(jsonPath("$[1].id").value(joinedCourse.id))
+            .andExpect(jsonPath("$[1].ownedByMe").value(false))
     }
 }
