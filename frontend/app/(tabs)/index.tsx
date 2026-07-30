@@ -3,7 +3,8 @@ import { RoleBadge } from '@/src/components/RoleBadge';
 import { useAuth } from '@/src/context/AuthContext';
 import { colors, shadow } from '@/src/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function HomeScreen() {
@@ -23,7 +24,11 @@ export default function HomeScreen() {
               : 'Organiza tus recordatorios y participa en tus clases.'}
           </Text>
         </View>
-        <View style={styles.card}>
+        <Pressable
+          disabled={!isTeacher}
+          onPress={() => router.push('/course/new' as never)}
+          style={({ pressed }) => [styles.card, pressed && styles.cardPressed, !isTeacher && styles.cardDisabled]}
+        >
           <View style={styles.icon}>
             <Ionicons color={colors.blue} name={isTeacher ? 'add-circle-outline' : 'enter-outline'} size={30} />
           </View>
@@ -35,7 +40,8 @@ export default function HomeScreen() {
                 : 'La opción para ingresar el código del profesor estará disponible en Cursos.'}
             </Text>
           </View>
-        </View>
+          {isTeacher ? <Ionicons color={colors.muted} name="chevron-forward" size={22} /> : null}
+        </Pressable>
       </View>
     </SafeAreaView>
   );
@@ -58,6 +64,8 @@ const styles = StyleSheet.create({
     padding: 18,
     ...shadow,
   },
+  cardPressed: { opacity: 0.76, transform: [{ scale: 0.995 }] },
+  cardDisabled: { opacity: 0.7 },
   icon: {
     alignItems: 'center',
     backgroundColor: colors.bluePale,
