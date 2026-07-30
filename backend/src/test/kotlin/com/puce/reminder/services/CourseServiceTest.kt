@@ -3,6 +3,8 @@ package com.puce.reminder.services
 import com.puce.reminder.config.CurrentUser
 import com.puce.reminder.dto.CourseCreateRequest
 import com.puce.reminder.entities.Course
+import com.puce.reminder.entities.CourseMembership
+import com.puce.reminder.repositories.CourseMembershipRepository
 import com.puce.reminder.repositories.CourseRepository
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
@@ -17,14 +19,16 @@ import org.mockito.Mockito.`when`
 
 class CourseServiceTest {
     private lateinit var courses: CourseRepository
+    private lateinit var memberships: CourseMembershipRepository
     private lateinit var currentUser: CurrentUser
     private lateinit var service: CourseService
 
     @BeforeEach
     fun setUp() {
         courses = mock(CourseRepository::class.java)
+        memberships = mock(CourseMembershipRepository::class.java)
         currentUser = mock(CurrentUser::class.java)
-        service = CourseService(courses, currentUser)
+        service = CourseService(courses, memberships, currentUser)
         `when`(currentUser.id()).thenReturn("teacher-id")
         `when`(courses.save(any(Course::class.java))).thenAnswer { invocation ->
             invocation.getArgument<Course>(0).apply { id = 1L }
@@ -48,5 +52,23 @@ class CourseServiceTest {
         service.create(CourseCreateRequest("Programación"))
 
         verify(courses, times(2)).existsByJoinCode(anyString())
+    }
+
+    @Test
+    fun `student joins the course identified by the normalized code`() {
+        val course = Course(
+            id = 9L,
+            name = "Programación",
+            joinCode = "PRO-82KLM",
+            ownerUserId = "teacher-id",
+        )
+        `when`(currentUser.id()).thenReturn("student-id")
+        `when`(courses.findByJoinCodeIgnoreCase("PRO-82KLM")).thenReturn(course)
+        `when`(memberships.existsByCourseIdAndStudentUserId(9L, "student-id")).thenReturn(false)
+
+        val result = service.join(" pro-82klm ")
+
+        assertEquals(9L, result.id)
+        verify(memberships).save(any(CourseMembership::class.java))
     }
 }

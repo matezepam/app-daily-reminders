@@ -4,7 +4,9 @@ import com.puce.reminder.config.CurrentUser
 import com.puce.reminder.dto.CourseCreateRequest
 import com.puce.reminder.dto.CourseResponse
 import com.puce.reminder.entities.Course
+import com.puce.reminder.entities.CourseMembership
 import com.puce.reminder.exceptions.ApiException
+import com.puce.reminder.repositories.CourseMembershipRepository
 import com.puce.reminder.repositories.CourseRepository
 import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
@@ -15,6 +17,7 @@ import java.text.Normalizer
 @Service
 class CourseService(
     private val courses: CourseRepository,
+    private val memberships: CourseMembershipRepository,
     private val currentUser: CurrentUser,
 ) {
     private val random = SecureRandom()
@@ -29,6 +32,25 @@ class CourseService(
                 ownerUserId = currentUser.id(),
             ),
         )
+        return course.toResponse()
+    }
+
+    @Transactional
+    fun join(rawCode: String): CourseResponse {
+        val studentUserId = currentUser.id()
+        val code = rawCode.trim().uppercase()
+        val course = courses.findByJoinCodeIgnoreCase(code)
+            ?: throw ApiException(HttpStatus.NOT_FOUND, "El código de la clase no existe")
+        val courseId = requireNotNull(course.id)
+
+        if (course.ownerUserId == studentUserId) {
+            throw ApiException(HttpStatus.CONFLICT, "El propietario ya pertenece a esta clase")
+        }
+        if (memberships.existsByCourseIdAndStudentUserId(courseId, studentUserId)) {
+            throw ApiException(HttpStatus.CONFLICT, "Ya perteneces a esta clase")
+        }
+
+        memberships.save(CourseMembership(course = course, studentUserId = studentUserId))
         return course.toResponse()
     }
 
