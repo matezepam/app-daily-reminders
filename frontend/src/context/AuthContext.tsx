@@ -1,6 +1,6 @@
 import { createContext, type PropsWithChildren, useContext, useEffect, useMemo, useState } from 'react';
 
-import { ApiClientError, postJson } from '@/src/api/client';
+import { ApiClientError, getSessionIdentity, postJson } from '@/src/api/client';
 import { clearSession, loadSession, saveSession } from '@/src/services/authStorage';
 import type { AuthenticationResponse, AuthSession } from '@/src/types/auth';
 
@@ -24,7 +24,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   useEffect(() => {
     loadSession()
-      .then(setSession)
+      .then(async (storedSession) => {
+        if (!storedSession) return;
+        if (storedSession.roles?.length && storedSession.userId && storedSession.username) {
+          setSession(storedSession);
+          return;
+        }
+
+        try {
+          const identity = await getSessionIdentity(storedSession.accessToken);
+          const hydratedSession = { ...storedSession, ...identity };
+          await saveSession(hydratedSession);
+          setSession(hydratedSession);
+        } catch {
+          await clearSession();
+        }
+      })
       .finally(() => setInitializing(false));
   }, []);
 
@@ -41,6 +56,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
         ...response,
         email,
         expiresAt: Date.now() + response.expiresIn * 1000,
+        ...(await getSessionIdentity(response.accessToken)),
       };
       await saveSession(nextSession);
       setSession(nextSession);
