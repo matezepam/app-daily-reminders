@@ -6,9 +6,20 @@ export type AuthenticationResponse = {
   tokenType: string;
 };
 
+export type SessionRole = 'ADMIN' | 'STUDENT' | 'TEACHER';
+
+export type SessionIdentity = {
+  roles: SessionRole[];
+  userId: string;
+  username: string;
+};
+
 export type AuthSession = AuthenticationResponse & {
   email: string;
   expiresAt: number;
+  roles?: SessionRole[];
+  userId?: string;
+  username?: string;
 };
 
 export type ApiErrorResponse = {
