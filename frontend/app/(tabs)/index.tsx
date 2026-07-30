@@ -25,9 +25,8 @@ export default function HomeScreen() {
           </Text>
         </View>
         <Pressable
-          disabled={!isTeacher}
-          onPress={() => router.push('/course/new' as never)}
-          style={({ pressed }) => [styles.card, pressed && styles.cardPressed, !isTeacher && styles.cardDisabled]}
+          onPress={() => router.push((isTeacher ? '/course/new' : '/course/join') as never)}
+          style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
         >
           <View style={styles.icon}>
             <Ionicons color={colors.blue} name={isTeacher ? 'add-circle-outline' : 'enter-outline'} size={30} />
@@ -40,7 +39,7 @@ export default function HomeScreen() {
                 : 'La opción para ingresar el código del profesor estará disponible en Cursos.'}
             </Text>
           </View>
-          {isTeacher ? <Ionicons color={colors.muted} name="chevron-forward" size={22} /> : null}
+          <Ionicons color={colors.muted} name="chevron-forward" size={22} />
         </Pressable>
       </View>
     </SafeAreaView>
@@ -65,7 +64,6 @@ const styles = StyleSheet.create({
     ...shadow,
   },
   cardPressed: { opacity: 0.76, transform: [{ scale: 0.995 }] },
-  cardDisabled: { opacity: 0.7 },
   icon: {
     alignItems: 'center',
     backgroundColor: colors.bluePale,
