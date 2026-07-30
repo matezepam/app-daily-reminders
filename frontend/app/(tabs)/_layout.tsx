@@ -21,6 +21,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="courses"
+        options={{
+          tabBarIcon: ({ color, size }) => <Ionicons color={color} name="albums-outline" size={size} />,
+          title: 'Cursos',
+        }}
+      />
+      <Tabs.Screen
         name="profile"
         options={{
           tabBarIcon: ({ color, size }) => <Ionicons color={color} name="person-outline" size={size} />,
