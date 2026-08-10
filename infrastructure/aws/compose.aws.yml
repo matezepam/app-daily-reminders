@@ -1,0 +1,45 @@
+services:
+  users-db-setup:
+    logging: &aws-logging
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP:?AWS_LOG_GROUP is required}
+        awslogs-create-group: "true"
+        awslogs-stream: users-db-setup
+
+  academic-reminder-db-setup:
+    logging:
+      <<: *aws-logging
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP:?AWS_LOG_GROUP is required}
+        awslogs-create-group: "true"
+        awslogs-stream: academic-reminder-db-setup
+
+  users:
+    logging:
+      <<: *aws-logging
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP:?AWS_LOG_GROUP is required}
+        awslogs-create-group: "true"
+        awslogs-stream: users
+
+  academic-reminder:
+    logging:
+      <<: *aws-logging
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP:?AWS_LOG_GROUP is required}
+        awslogs-create-group: "true"
+        awslogs-stream: academic-reminder
+
+  nginx:
+    logging:
+      <<: *aws-logging
+      options:
+        awslogs-region: ${AWS_REGION}
+        awslogs-group: ${AWS_LOG_GROUP:?AWS_LOG_GROUP is required}
+        awslogs-create-group: "true"
+        awslogs-stream: nginx
