@@ -9,6 +9,7 @@ import {
 } from "react";
 import {
   ApiClientError,
+  apiRequest,
   authenticate,
   getMyProfile,
   refreshTokens,
@@ -18,7 +19,7 @@ import {
   loadSession,
   saveSession,
 } from "@/src/services/authStorage";
-import type { AuthSession } from "@/src/types/auth";
+import type { AuthSession, UserProfile } from "@/src/types/auth";
 
 type AuthContextValue = {
   busy: boolean;
@@ -29,6 +30,7 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   getSession: () => Promise<AuthSession>;
+  updateProfile: (fullName: string) => Promise<UserProfile>;
 };
 const AuthContext = createContext<AuthContextValue | null>(null);
 
@@ -120,6 +122,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
       throw cause;
     }
   }, [renew, session]);
+  const updateProfile = useCallback(
+    async (fullName: string) => {
+      const active = await getSession();
+      const profile = await apiRequest<UserProfile>(active, "/users/me", {
+        method: "PUT",
+        body: { fullName: fullName.trim() },
+      });
+      const next = { ...active, profile };
+      await saveSession(next);
+      setSession(next);
+      return profile;
+    },
+    [getSession],
+  );
   const value = useMemo(
     () => ({
       busy,
@@ -130,8 +146,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
       signIn,
       signOut,
       getSession,
+      updateProfile,
     }),
-    [busy, error, initializing, session, getSession],
+    [busy, error, initializing, session, getSession, updateProfile],
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

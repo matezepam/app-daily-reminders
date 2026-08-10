@@ -5,23 +5,18 @@ import { colors } from "@/src/theme";
 import type { SessionRole } from "@/src/types/auth";
 
 const labels: Record<SessionRole, string> = {
-  ADMIN: "Administrador",
-  USER: "Estudiante",
-  PROFESSOR: "Profesor",
+  ADMIN: "Profesor / administrador",
+  STUDENT: "Estudiante",
 };
 
 export function RoleBadge({ roles = [] }: { roles?: SessionRole[] }) {
-  const role = roles.includes("ADMIN")
-    ? "ADMIN"
-    : roles.includes("PROFESSOR")
-      ? "PROFESSOR"
-      : "USER";
+  const role: SessionRole = roles.includes("ADMIN") ? "ADMIN" : "STUDENT";
 
   return (
     <View style={styles.badge}>
       <Ionicons
         color={colors.blue}
-        name={role === "USER" ? "school-outline" : "briefcase-outline"}
+        name={role === "STUDENT" ? "school-outline" : "briefcase-outline"}
         size={17}
       />
       <Text style={styles.label}>{labels[role]}</Text>

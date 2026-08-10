@@ -9,6 +9,7 @@ import {
 } from "react";
 import { apiRequest } from "@/src/api/client";
 import { useAuth } from "@/src/context/AuthContext";
+import type { UserProfile } from "@/src/types/auth";
 import type {
   Activity,
   ActivityInput,
@@ -55,6 +56,7 @@ type DataValue = {
   createCategory: (name: string, color: string) => Promise<PriorityCategory>;
   deleteCategory: (id: number) => Promise<void>;
   getAttendance: (courseId: number) => Promise<Attendance[]>;
+  getCourseStudents: (courseId: number) => Promise<UserProfile[]>;
   saveAttendance: (
     courseId: number,
     studentUserId: string,
@@ -83,9 +85,7 @@ export function DataProvider({ children }: PropsWithChildren) {
       const [d, c, p] = await Promise.all([
         call<Dashboard>("/academic-reminder/dashboard"),
         call<Course[]>("/academic-reminder/courses/me"),
-        session.profile.role === "USER"
-          ? call<PriorityCategory[]>("/academic-reminder/priority-categories")
-          : Promise.resolve([]),
+        call<PriorityCategory[]>("/academic-reminder/priority-categories"),
       ]);
       setDashboard(d);
       setCourses(c);
@@ -164,6 +164,8 @@ export function DataProvider({ children }: PropsWithChildren) {
         mutate(`/academic-reminder/priority-categories/${id}`, "DELETE"),
       getAttendance: (id) =>
         call(`/academic-reminder/courses/${id}/attendance`),
+      getCourseStudents: (id) =>
+        call(`/academic-reminder/courses/${id}/students`),
       saveAttendance: (id, studentUserId, attendanceDate, status) =>
         mutate(`/academic-reminder/courses/${id}/attendance`, "PUT", {
           studentUserId,
