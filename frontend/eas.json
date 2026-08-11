@@ -1,0 +1,43 @@
+{
+  "cli": {
+    "version": ">= 21.7.0",
+    "appVersionSource": "local"
+  },
+  "build": {
+    "preview": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://5d1dvnzh90.execute-api.us-east-1.amazonaws.com",
+        "EXPO_PUBLIC_COGNITO_REGION": "us-east-1",
+        "EXPO_PUBLIC_COGNITO_CLIENT_ID": "21jjggihppq5ba7dsk1532eada"
+      }
+    },
+    "production-apk": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://5d1dvnzh90.execute-api.us-east-1.amazonaws.com",
+        "EXPO_PUBLIC_COGNITO_REGION": "us-east-1",
+        "EXPO_PUBLIC_COGNITO_CLIENT_ID": "21jjggihppq5ba7dsk1532eada"
+      }
+    },
+    "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://5d1dvnzh90.execute-api.us-east-1.amazonaws.com",
+        "EXPO_PUBLIC_COGNITO_REGION": "us-east-1",
+        "EXPO_PUBLIC_COGNITO_CLIENT_ID": "21jjggihppq5ba7dsk1532eada"
+      }
+    }
+  },
+  "submit": {
+    "production": {}
+  }
+}

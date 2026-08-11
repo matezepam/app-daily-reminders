@@ -1,0 +1,15 @@
+BEGIN;
+
+UPDATE users
+SET role = CASE
+    WHEN UPPER(role) IN ('ADMIN', 'PROFESSOR') THEN 'ADMIN'
+    ELSE 'STUDENT'
+END,
+updated_at = CURRENT_TIMESTAMP
+WHERE role NOT IN ('STUDENT', 'ADMIN');
+
+ALTER TABLE users DROP CONSTRAINT IF EXISTS users_role_check;
+ALTER TABLE users
+    ADD CONSTRAINT users_role_check CHECK (role IN ('STUDENT', 'ADMIN'));
+
+COMMIT;

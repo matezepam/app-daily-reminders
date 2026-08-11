@@ -1,0 +1,26 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "users-db",
+      "Group": "Academic Reminder",
+      "Host": "users-db",
+      "Port": 5432,
+      "MaintenanceDB": "users_db",
+      "Username": "users_app",
+      "SSLMode": "prefer",
+      "PasswordExecCommand": "printenv USERS_DB_PASSWORD",
+      "PasswordExecExpiration": 3600
+    },
+    "2": {
+      "Name": "academic-reminder-db",
+      "Group": "Academic Reminder",
+      "Host": "academic-reminder-db",
+      "Port": 5432,
+      "MaintenanceDB": "academic_reminder_db",
+      "Username": "academic_app",
+      "SSLMode": "prefer",
+      "PasswordExecCommand": "printenv ACADEMIC_DB_PASSWORD",
+      "PasswordExecExpiration": 3600
+    }
+  }
+}

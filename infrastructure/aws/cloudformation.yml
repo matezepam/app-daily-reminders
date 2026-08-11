@@ -1,0 +1,344 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: Daily Reminder production backend on EC2, private RDS PostgreSQL and HTTPS API Gateway
+
+Parameters:
+  VpcId:
+    Type: AWS::EC2::VPC::Id
+  BackendSubnetId:
+    Type: AWS::EC2::Subnet::Id
+  DatabaseSubnetIds:
+    Type: List<AWS::EC2::Subnet::Id>
+    Description: At least two subnets in different Availability Zones
+  FrontendOrigin:
+    Type: String
+    Default: https://d29ydq13vz3ryv.cloudfront.net
+  CognitoUserPoolId:
+    Type: String
+    Default: us-east-1_DhpshEyR3
+  CognitoClientId:
+    Type: String
+    Default: 21jjggihppq5ba7dsk1532eada
+  CognitoDomain:
+    Type: String
+    Default: https://academic-reminder-570642550443-dev.auth.us-east-1.amazoncognito.com
+  BackendInstanceType:
+    Type: String
+    Default: t3.small
+    AllowedValues: [t3.small, t3.medium]
+  DatabaseInstanceClass:
+    Type: String
+    Default: db.t4g.micro
+    AllowedValues: [db.t4g.micro, db.t4g.small]
+  ArtifactKey:
+    Type: String
+    Default: releases/current.zip
+  ApplicationLogGroupName:
+    Type: String
+    Default: /daily-reminder/production/app
+  LatestAmiId:
+    Type: AWS::SSM::Parameter::Value<AWS::EC2::Image::Id>
+    Default: /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64
+
+Resources:
+  DeploymentBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireOldArtifactVersions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30
+
+  DatabaseMasterSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: !Sub ${AWS::StackName}/database/master
+      Description: Daily Reminder RDS administrator
+      GenerateSecretString:
+        SecretStringTemplate: '{"username":"reminder_admin"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludePunctuation: true
+
+  UsersDatabaseSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: !Sub ${AWS::StackName}/database/users-app
+      Description: Daily Reminder users service database credentials
+      GenerateSecretString:
+        SecretStringTemplate: '{"username":"users_app"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludePunctuation: true
+
+  AcademicDatabaseSecret:
+    Type: AWS::SecretsManager::Secret
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      Name: !Sub ${AWS::StackName}/database/academic-app
+      Description: Daily Reminder academic service database credentials
+      GenerateSecretString:
+        SecretStringTemplate: '{"username":"academic_app"}'
+        GenerateStringKey: password
+        PasswordLength: 32
+        ExcludePunctuation: true
+
+  ApplicationLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Ref ApplicationLogGroupName
+      RetentionInDays: 30
+
+  BackendSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: HTTP ingress for the Daily Reminder gateway
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+          Description: Public origin consumed through the HTTPS API endpoint
+      Tags:
+        - Key: Name
+          Value: daily-reminder-backend
+
+  DatabaseSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: PostgreSQL accessible only by the Daily Reminder backend
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 5432
+          ToPort: 5432
+          SourceSecurityGroupId: !Ref BackendSecurityGroup
+          Description: Backend application access
+      Tags:
+        - Key: Name
+          Value: daily-reminder-database
+
+  DatabaseSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Daily Reminder PostgreSQL subnets
+      SubnetIds: !Ref DatabaseSubnetIds
+
+  Database:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+    Properties:
+      DBInstanceIdentifier: daily-reminder-db
+      Engine: postgres
+      DBInstanceClass: !Ref DatabaseInstanceClass
+      AllocatedStorage: 20
+      MaxAllocatedStorage: 100
+      StorageType: gp3
+      StorageEncrypted: true
+      MasterUsername: !Sub '{{resolve:secretsmanager:${DatabaseMasterSecret}:SecretString:username}}'
+      MasterUserPassword: !Sub '{{resolve:secretsmanager:${DatabaseMasterSecret}:SecretString:password}}'
+      Port: 5432
+      PubliclyAccessible: false
+      MultiAZ: false
+      BackupRetentionPeriod: 1
+      DeleteAutomatedBackups: false
+      AutoMinorVersionUpgrade: true
+      CopyTagsToSnapshot: true
+      DBSubnetGroupName: !Ref DatabaseSubnetGroup
+      VPCSecurityGroups:
+        - !Ref DatabaseSecurityGroup
+      Tags:
+        - Key: Name
+          Value: daily-reminder-db
+
+  BackendRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ec2.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy
+      Policies:
+        - PolicyName: DailyReminderDeploymentAccess
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetBucketLocation
+                Resource:
+                  - !GetAtt DeploymentBucket.Arn
+                  - !Sub ${DeploymentBucket.Arn}/*
+              - Effect: Allow
+                Action: secretsmanager:GetSecretValue
+                Resource:
+                  - !Ref DatabaseMasterSecret
+                  - !Ref UsersDatabaseSecret
+                  - !Ref AcademicDatabaseSecret
+
+  BackendInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - !Ref BackendRole
+
+  BackendInstance:
+    Type: AWS::EC2::Instance
+    DependsOn:
+      - ApplicationLogGroup
+    Properties:
+      ImageId: !Ref LatestAmiId
+      InstanceType: !Ref BackendInstanceType
+      IamInstanceProfile: !Ref BackendInstanceProfile
+      SubnetId: !Ref BackendSubnetId
+      SecurityGroupIds:
+        - !Ref BackendSecurityGroup
+      MetadataOptions:
+        HttpEndpoint: enabled
+        HttpTokens: required
+      BlockDeviceMappings:
+        - DeviceName: /dev/xvda
+          Ebs:
+            VolumeSize: 30
+            VolumeType: gp3
+            Encrypted: true
+            DeleteOnTermination: true
+      Tags:
+        - Key: Name
+          Value: daily-reminder-backend
+      UserData:
+        Fn::Base64: !Sub |
+          #!/bin/bash
+          set -euo pipefail
+          exec > >(tee /var/log/daily-reminder-bootstrap.log | logger -t daily-reminder-bootstrap -s 2>/dev/console) 2>&1
+          # Amazon Linux 2023 already includes curl-minimal. Installing the
+          # full curl package conflicts with it on fresh free-plan instances.
+          dnf install -y docker jq unzip postgresql16
+          systemctl enable --now docker
+          usermod -aG docker ec2-user
+          mkdir -p /usr/local/lib/docker/cli-plugins /opt/daily-reminder/source
+          curl -fsSL https://github.com/docker/compose/releases/download/v2.39.1/docker-compose-linux-x86_64 -o /usr/local/lib/docker/cli-plugins/docker-compose
+          chmod 0755 /usr/local/lib/docker/cli-plugins/docker-compose
+          if [ ! -f /swapfile ]; then
+            dd if=/dev/zero of=/swapfile bs=1M count=2048
+            chmod 600 /swapfile
+            mkswap /swapfile
+            swapon /swapfile
+            printf '/swapfile swap swap defaults 0 0\n' >> /etc/fstab
+          fi
+          artifact=/tmp/daily-reminder-current.zip
+          for attempt in $(seq 1 90); do
+            if aws s3 cp s3://${DeploymentBucket}/${ArtifactKey} "$artifact" --region ${AWS::Region}; then
+              break
+            fi
+            sleep 20
+          done
+          test -s "$artifact"
+          rm -rf /opt/daily-reminder/source/*
+          unzip -q -o "$artifact" -d /opt/daily-reminder/source
+          chmod 0755 /opt/daily-reminder/source/infrastructure/aws/deploy-instance.sh
+          export AWS_REGION=${AWS::Region}
+          export DATABASE_ENDPOINT=${Database.Endpoint.Address}
+          export DATABASE_MASTER_SECRET_ARN=${DatabaseMasterSecret}
+          export USERS_DATABASE_SECRET_ARN=${UsersDatabaseSecret}
+          export ACADEMIC_DATABASE_SECRET_ARN=${AcademicDatabaseSecret}
+          export COGNITO_REGION=${AWS::Region}
+          export COGNITO_USER_POOL_ID=${CognitoUserPoolId}
+          export COGNITO_CLIENT_ID=${CognitoClientId}
+          export COGNITO_DOMAIN=${CognitoDomain}
+          export CORS_ALLOWED_ORIGINS=${FrontendOrigin}
+          export AWS_LOG_GROUP=${ApplicationLogGroup}
+          /opt/daily-reminder/source/infrastructure/aws/deploy-instance.sh
+
+  BackendElasticIp:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      Tags:
+        - Key: Name
+          Value: daily-reminder-backend
+
+  BackendElasticIpAssociation:
+    Type: AWS::EC2::EIPAssociation
+    Properties:
+      AllocationId: !GetAtt BackendElasticIp.AllocationId
+      InstanceId: !Ref BackendInstance
+
+  BackendApi:
+    Type: AWS::ApiGatewayV2::Api
+    Properties:
+      Name: daily-reminder-backend
+      Description: HTTPS gateway for the Daily Reminder backend
+      ProtocolType: HTTP
+      DisableExecuteApiEndpoint: false
+
+  BackendIntegration:
+    Type: AWS::ApiGatewayV2::Integration
+    Properties:
+      ApiId: !Ref BackendApi
+      IntegrationType: HTTP_PROXY
+      IntegrationMethod: ANY
+      PayloadFormatVersion: "1.0"
+      IntegrationUri: !Sub
+        - http://${OriginIp}
+        - OriginIp: !GetAtt BackendElasticIp.PublicIp
+
+  BackendDefaultRoute:
+    Type: AWS::ApiGatewayV2::Route
+    Properties:
+      ApiId: !Ref BackendApi
+      RouteKey: $default
+      Target: !Sub integrations/${BackendIntegration}
+
+  BackendDefaultStage:
+    Type: AWS::ApiGatewayV2::Stage
+    Properties:
+      ApiId: !Ref BackendApi
+      StageName: $default
+      AutoDeploy: true
+      DefaultRouteSettings:
+        DetailedMetricsEnabled: true
+
+Outputs:
+  BackendApiUrl:
+    Description: HTTPS URL used by EXPO_PUBLIC_API_URL
+    Value: !Sub https://${BackendApi}.execute-api.${AWS::Region}.amazonaws.com
+  BackendInstanceId:
+    Value: !Ref BackendInstance
+  BackendElasticIp:
+    Value: !GetAtt BackendElasticIp.PublicIp
+  DatabaseEndpoint:
+    Value: !GetAtt Database.Endpoint.Address
+  DeploymentBucketName:
+    Value: !Ref DeploymentBucket
+  ArtifactKey:
+    Value: !Ref ArtifactKey

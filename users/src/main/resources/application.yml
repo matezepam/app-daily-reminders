@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: users
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/users_db}
+    username: ${DB_USER:users_app}
+    password: ${DB_PASSWORD:change_me_users}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        generate_statistics: true
+        jdbc:
+          time_zone: UTC
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  port: 8081
+  error:
+    include-message: never
+
+app:
+  security:
+    cors-allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:9090}
+  cognito:
+    region: ${COGNITO_REGION:us-east-1}
+    user-pool-id: ${COGNITO_USER_POOL_ID:}
+    client-id: ${COGNITO_CLIENT_ID:}
+    domain: ${COGNITO_DOMAIN:}
+    issuer-uri: ${COGNITO_ISSUER_URI:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} | %-5level | ${spring.application.name} | sub=%X{sub:-anonimo} | %logger{40} | %msg%n"
+  level:
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
