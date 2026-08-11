@@ -19,14 +19,14 @@ No existe un tercer rol funcional ni un superadministrador global.
 | RF-04 | Gestión de clases | El profesor crea, consulta y elimina sus clases. Otro profesor no puede administrarlas. | `CourseController`, `CourseService` |
 | RF-05 | Curso no duplicado | Un profesor no puede crear dos cursos con el mismo nombre y descripción normalizados. La API responde 409 y la interfaz avisa antes de enviar. | Índice único funcional, servicio y formulario de curso |
 | RF-06 | Unión a clase | El estudiante se une con un código válido; un profesor no puede unirse y una unión repetida se rechaza. | `POST /academic-reminder/courses/join` |
-| RF-07 | Recordatorios personales | Ambos roles crean, editan, completan, priorizan y eliminan sus recordatorios personales. | `ReminderController`, pantallas `reminder/*` |
-| RF-08 | Avisos de clase | Solo el profesor propietario crea recordatorios de una clase; los estudiantes inscritos los consultan y completan de forma individual. | `ReminderService`, estados por estudiante |
-| RF-09 | Actividades | El profesor crea, edita y elimina actividades; el estudiante inscrito las consulta y registra su finalización. | `ActivityController`, `ActivityService` |
+| RF-07 | Recordatorios personales | Ambos roles crean, editan, completan, deshacen una finalización accidental, priorizan y eliminan sus recordatorios personales. | `ReminderController`, pantallas `reminder/*` |
+| RF-08 | Avisos de clase | Solo el profesor propietario crea recordatorios de una clase; los estudiantes inscritos los consultan, completan y reabren de forma individual. | `ReminderService`, estados por estudiante |
+| RF-09 | Actividades | El profesor crea, edita y elimina actividades y consulta quién las completó y cuándo; el estudiante inscrito registra o deshace su finalización. | `ActivityController`, `ActivityService` |
 | RF-10 | Numeración por profesor | El primer número visible de actividad de cada profesor es 1 y su secuencia es independiente de otros profesores. | `activity_counters` y UPSERT atómico |
-| RF-11 | Historial y urgencia | Se muestran actividades completadas/vencidas y se destacan las que vencen dentro de 24 horas. | Dashboard y utilidades de estado del frontend |
+| RF-11 | Historial y urgencia | Una pestaña reúne recordatorios y actividades completadas/vencidas; también se destacan las que vencen dentro de 24 horas. | Pestaña `history`, detalle de curso y utilidades de estado |
 | RF-12 | Prioridades | Cada usuario administra categorías de prioridad propias y puede aplicarlas a sus recordatorios. | `PriorityCategoryController` |
-| RF-13 | Notificaciones | El usuario configura anticipaciones, consulta próximas notificaciones y puede cancelarlas. | `NotificationController` |
-| RF-14 | Asistencia | El profesor registra asistencia solo para estudiantes inscritos en su clase y puede consultar el historial. | `AttendanceController`, `AttendanceService` |
+| RF-13 | Avisos internos | El usuario configura anticipaciones y consulta próximos avisos desde el botón de campana. No se solicitan permisos ni se generan alarmas del sistema operativo. | `NotificationController`, pantalla `notifications` |
+| RF-14 | Asistencia | El profesor registra asistencia solo para estudiantes inscritos y consulta un historial visual por nombre, fecha y estado. | `AttendanceController`, `AttendanceService`, pantalla `attendance` |
 | RF-15 | Auditoría | Cambios relevantes de usuarios y del dominio académico quedan registrados con actor, entidad y fecha. | Tablas `audit_log`, `AuditService` |
 
 ## Matriz de permisos
@@ -38,9 +38,12 @@ No existe un tercer rol funcional ni un superadministrador global.
 | Crear actividad de clase | Sí, solo en clase propia | No |
 | Editar/eliminar actividad | Sí, solo si es propietario | No |
 | Completar actividad | No | Sí, si está inscrito |
+| Deshacer actividad completada | No | Sí, únicamente su propio registro |
+| Ver quién completó una actividad | Sí, solo en clase propia | No; solo ve su propio estado |
 | Registrar asistencia | Sí, solo en clase propia | No |
 | Crear aviso de clase | Sí, solo en clase propia | No |
 | Crear recordatorio personal | Sí | Sí |
+| Deshacer recordatorio personal completado | Sí | Sí |
 | Administrar prioridades propias | Sí | Sí |
 | Consultar datos ajenos | No | No |
 
@@ -64,11 +67,12 @@ No existe un tercer rol funcional ni un superadministrador global.
 2. Un profesor elige “Profesor” al registrarse, queda únicamente en `ADMIN`, su perfil se sincroniza en `users_db` y puede crear una clase.
 3. Intentar repetir el nombre y la descripción normalizados de una clase del mismo profesor produce 409.
 4. Un estudiante se une con el código; otro profesor recibe 403 si intenta unirse.
-5. El profesor crea y edita una actividad; el estudiante la completa y la ve en historial.
+5. El profesor crea y edita una actividad; el estudiante la completa, la ve en historial y puede deshacerla. El profesor ve nombre y fecha de la entrega.
 6. Dos profesores crean su primera actividad y ambos ven el número 1.
 7. Una actividad a menos de 24 horas se muestra como urgente; una vencida se diferencia visualmente.
 8. El profesor registra asistencia solo para un estudiante inscrito.
 9. Un token ausente o inválido produce 401; acceso fuera del rol produce 403; un recurso ajeno no queda expuesto.
+10. Fecha y hora se eligen con calendario/reloj tanto en Android como en web.
 
 ## Trazabilidad con Jira
 

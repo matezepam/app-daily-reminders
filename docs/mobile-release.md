@@ -6,10 +6,10 @@
 - Expo project: `@pmsalazare/daily-reminder`
 - Project ID: `ba06f0ba-77ba-4c91-84f0-0837eeaf4141`
 - Android package: `ec.edu.puce.dailyreminder`
-- Versión: `1.0.0`
-- Version code: `1`
+- Versión final: `1.1.0`
+- Version code final: `2`
 
-## Build validado del 10-08-2026
+## Build publicado anterior — 10-08-2026
 
 - EAS build ID: `2ec24959-40e7-481a-b280-cd2d8a972934`
 - Estado EAS: `FINISHED`
@@ -43,6 +43,26 @@ Estado de comprobación:
 5. [x] Se sube como `AcademicReminder.apk` con `application/vnd.android.package-archive`.
 6. [x] CloudFront responde 200 y conserva el tamaño/hash esperado.
 7. [ ] El usuario instala, inicia sesión y ejecuta el flujo de aceptación en un teléfono real.
+
+## Release 1.1.0 — validación final
+
+Incluye historial global, entregas visibles para el profesor, finalización reversible, fecha exacta de finalización, asistencia visual, centro de avisos interno y selectores gráficos de fecha/hora. El `versionCode` aumenta a 2 para que Android pueda actualizar el APK anterior firmado por el mismo proyecto EAS.
+
+También bloquea acciones repetidas mientras una finalización, reapertura o eliminación está en curso. El backend bloquea la fila del recordatorio durante esas transiciones para que dos solicitudes concurrentes no puedan borrar o recrear el mismo aviso a la vez.
+
+- EAS build ID: `9d1f7a62-c2d7-4eb2-98c7-03d03cc5c514`
+- Perfil: `production-apk`
+- Versión: `1.1.0` / version code `2`
+- Estado documentado al 11-08-2026: en cola de EAS; no se inició un build duplicado.
+
+Orden obligatorio solicitado por el usuario:
+
+1. [x] Validar la interfaz autenticada en Docker local.
+2. [x] Corregir y repetir el flujo completar/deshacer sin conflictos.
+3. [x] Desplegar el backend compatible en AWS y comprobar ambos health checks, Postman y CloudWatch.
+4. [ ] Generar el APK 1.1.0 y descargarlo localmente.
+5. [ ] Entregar el APK al usuario para instalación y prueba; todavía no publicarlo.
+6. [ ] Solo después de la aprobación, respaldar y reemplazar `AcademicReminder.apk` en S3/CloudFront.
 
 ## Prueba final en un teléfono
 

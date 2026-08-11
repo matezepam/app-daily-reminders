@@ -5,13 +5,13 @@ Esta matriz vincula cada criterio entregado por PUCE TEC con evidencia verificab
 | Criterio | Cobertura en Daily Reminder | Evidencia principal | Estado |
 |---|---|---|---|
 | 1.1 RF/RNF y casos de uso | 15 RF, 9 RNF, criterios de aceptación y matriz de permisos para los dos actores. | [`requirements-and-traceability.md`](requirements-and-traceability.md) | Completo |
-| 1.2 GitFlow | Flujo, ramas, convenciones y Definition of Done documentados. Los commits se crearán únicamente después de la aceptación del usuario. | [`development-workflow.md`](development-workflow.md) | Documentado; ejecución pendiente de aprobación |
-| 1.3 Pruebas unitarias | 147 pruebas de backend y 3 de la Lambda aprobadas, sin fallos; cobertura de líneas 100% en ambos servicios Kotlin. | [`testing-evidence.md`](testing-evidence.md), reportes JaCoCo | Completo |
+| 1.2 GitFlow | Flujo, ramas, convenciones y Definition of Done documentados. La versión anterior fue integrada; la versión 1.1.0 permanece sin commit/push hasta la aceptación final. | [`development-workflow.md`](development-workflow.md) | En validación de 1.1.0 |
+| 1.3 Pruebas unitarias | 166 pruebas de backend y 3 de la Lambda aprobadas, sin fallos; cobertura de líneas 100% en ambos servicios Kotlin. | [`testing-evidence.md`](testing-evidence.md), reportes JaCoCo | Completo |
 | 1.4 Priorización y ADR | Decisiones de roles, SQL sin Flyway e identificadores/duplicados registradas con contexto y consecuencias. | [`adr/`](adr/) | Completo |
-| 2.1 Objetivo y funciones | Clases, unión, recordatorios, actividades, historial, urgencia, prioridades y asistencia operativos por rol. | Aplicación web y APK de evaluación | Automatizado completo; prueba física pendiente |
+| 2.1 Objetivo y funciones | Clases, unión, recordatorios, actividades, entregas por estudiante, historial, urgencia, prioridades y asistencia operativos por rol. | Aplicación web y APK de evaluación | Web local 1.1.0 aprobada; APK 1.1.0 pendiente |
 | 2.2 API y base de datos | Aplicación consume API Gateway HTTPS; microservicios persisten en RDS PostgreSQL privado. | [`architecture.md`](architecture.md), colección Postman | Completo |
 | 2.3 Validación y patrones | DTO validados, errores uniformes, separación por capas, formularios con validación inmediata y confirmaciones destructivas. | Backend, frontend y pruebas negativas | Completo |
-| 2.4 Usabilidad | Acciones con texto, estados vacíos, navegación por rol, urgencia visible y edición de actividades/recordatorios. | Prueba visual autenticada en CloudFront | Completo |
+| 2.4 Usabilidad | Acciones con texto, estados vacíos, navegación por rol, historial global, entrega por nombre, asistencia visual y selectores gráficos. | Prueba visual autenticada local y en CloudFront | Completo |
 | 3.1 Dominio y datos | Entidades y relaciones 1:N/N:M documentadas; identificadores globales y número visible por profesor separados. | [`architecture.md`](architecture.md) | Completo |
 | 3.2 Organización en capas | Controller, DTO, mapper, service, access service, repository, entity y manejador global. | `users/src`, `academic-reminder/src` | Completo |
 | 3.3 Negocio y errores | Propiedad, rol, inscripción, duplicados, transiciones y fechas validadas; 400/401/403/404/409 comprobados. | Servicios, manejadores y Newman | Completo |
@@ -30,6 +30,6 @@ Esta matriz vincula cada criterio entregado por PUCE TEC con evidencia verificab
 
 Antes de declarar la entrega totalmente cerrada faltan únicamente evidencias que requieren intervención del equipo:
 
-1. Instalar el APK publicado en un teléfono Android real, iniciar sesión y ejecutar los casos de aceptación.
+1. Generar e instalar el APK 1.1.0 en un teléfono Android real, iniciar sesión y ejecutar los casos de aceptación antes de publicarlo.
 2. Revisar las claves y estados del tablero Jira con la compañera; no se deben inventar ni modificar sin acceso.
-3. Después de la aprobación expresa del usuario, crear ramas/commits/PR siguiendo el GitFlow documentado.
+3. Después de aprobar APK y AWS 1.1.0, crear commit/push/PR siguiendo el GitFlow documentado.

@@ -9,6 +9,9 @@ import org.springframework.validation.FieldError
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.dao.DataIntegrityViolationException
+import org.springframework.dao.DataAccessException
+import org.springframework.http.converter.HttpMessageNotReadableException
+import org.springframework.web.HttpRequestMethodNotSupportedException
 
 class GlobalExceptionHandlerTest {
     private val handler = GlobalExceptionHandler()
@@ -55,5 +58,17 @@ class GlobalExceptionHandlerTest {
 
         assertEquals(500, response.statusCode.value())
         assertEquals("Unexpected server error", response.body?.message)
+    }
+
+    @Test
+    fun `maps malformed methods and database failures without leaking details`() {
+        val malformed = handler.malformedRequest(mock<HttpMessageNotReadableException>(), request)
+        val method = handler.methodNotAllowed(HttpRequestMethodNotSupportedException("TRACE"), request)
+        val database = handler.databaseUnavailable(mock<DataAccessException>(), request)
+
+        assertEquals(400, malformed.statusCode.value())
+        assertEquals(405, method.statusCode.value())
+        assertEquals(503, database.statusCode.value())
+        assertEquals("Database is temporarily unavailable", database.body?.message)
     }
 }

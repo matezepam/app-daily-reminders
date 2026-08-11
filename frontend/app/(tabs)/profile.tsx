@@ -56,7 +56,7 @@ export default function Profile() {
           <Text style={s.roleText}>
             {session?.profile.role === "STUDENT"
               ? "Estudiante"
-              : "Profesor / administrador"}
+              : "Profesor / Administrador"}
           </Text>
         </View>
       </View>

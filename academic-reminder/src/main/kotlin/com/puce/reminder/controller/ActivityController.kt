@@ -27,6 +27,10 @@ class ActivityController(private val service: ActivityService) {
     @PreAuthorize("hasRole('STUDENT')")
     fun complete(@PathVariable id: Long) = service.complete(id)
 
+    @DeleteMapping("/activities/{id}/completion")
+    @PreAuthorize("hasRole('STUDENT')")
+    fun uncomplete(@PathVariable id: Long) = service.uncomplete(id)
+
     @DeleteMapping("/activities/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasRole('ADMIN')")

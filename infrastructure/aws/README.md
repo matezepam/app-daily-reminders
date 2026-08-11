@@ -25,6 +25,19 @@ El artefacto esperado por defecto es `releases/current.zip` dentro del bucket cr
 
 La instancia se administra con Systems Manager y no expone SSH. RDS es privado; por tanto, ni Postman ni la aplicación se conectan directamente a PostgreSQL.
 
+## Estado verificado — 11-08-2026
+
+- Backend desplegado mediante el artefacto versionado `releases/current.zip` y AWS Systems Manager.
+- Contenedores `users`, `academic-reminder` y `nginx` saludables; ambas tareas de preparación SQL finalizaron con código 0.
+- Los dos endpoints de salud públicos respondieron `UP` después del despliegue.
+- La web 1.1.0 se respaldó en `backups/web/20260811T194121Z/`, se publicó sin `--delete` y la invalidación CloudFront `IE1G21OQ6O6ZQ3K8RP6YSW40GO` terminó correctamente.
+- El APK público anterior quedó intacto durante la publicación web: 84.863.125 bytes, ETag `7b630c23d47e973ca621d0cf92431bcd`.
+- Una consulta exacta de CloudWatch posterior al despliegue no encontró eventos `ERROR`, excepciones ni respuestas HTTP 500.
+- Newman ejecutó 59 solicitudes automatizadas y 118 aserciones contra API Gateway, con 0 fallos y 0 respuestas 500.
+- Los datos sintéticos de la validación se eliminaron; los datos reales permanecen en RDS y no dependen de Docker Desktop.
+
+Postman se ejecuta desde cualquier computadora importando `postman/academic-reminder.postman_collection.json` y `postman/academic-reminder-aws.postman_environment.json`. El ambiente contiene solo URLs e identificadores públicos; usuario, contraseña y tokens se completan localmente y nunca se guardan en Git.
+
 ## Registro Cognito de los dos roles
 
 El formulario envía `custom:role=ADMIN` para profesor o `custom:role=STUDENT` para estudiante. La función de post-confirmación de [`cognito-registration/handler.py`](cognito-registration/handler.py) valida ese atributo, asigna exactamente uno de los dos grupos y elimina el contrario. Un valor ausente o inválido usa `STUDENT`; una recuperación de contraseña no cambia el rol.

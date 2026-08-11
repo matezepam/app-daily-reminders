@@ -20,6 +20,7 @@ import type {
   PriorityCategory,
   Reminder,
   ReminderInput,
+  ReminderNotification,
 } from "@/src/types/domain";
 
 const emptyDashboard: Dashboard = {
@@ -45,6 +46,7 @@ type DataValue = {
     id?: number,
   ) => Promise<Activity>;
   completeActivity: (id: number) => Promise<Activity>;
+  uncompleteActivity: (id: number) => Promise<Activity>;
   deleteActivity: (id: number) => Promise<void>;
   saveReminder: (
     input: ReminderInput,
@@ -52,7 +54,9 @@ type DataValue = {
     id?: number,
   ) => Promise<Reminder>;
   completeReminder: (id: number) => Promise<Reminder>;
+  uncompleteReminder: (id: number) => Promise<Reminder>;
   deleteReminder: (id: number) => Promise<void>;
+  getUpcomingNotifications: () => Promise<ReminderNotification[]>;
   createCategory: (name: string, color: string) => Promise<PriorityCategory>;
   deleteCategory: (id: number) => Promise<void>;
   getAttendance: (courseId: number) => Promise<Attendance[]>;
@@ -138,6 +142,8 @@ export function DataProvider({ children }: PropsWithChildren) {
         ),
       completeActivity: (id) =>
         mutate(`/academic-reminder/activities/${id}/complete`, "PATCH"),
+      uncompleteActivity: (id) =>
+        mutate(`/academic-reminder/activities/${id}/completion`, "DELETE"),
       deleteActivity: (id) =>
         mutate(`/academic-reminder/activities/${id}`, "DELETE"),
       saveReminder: (input, courseId, id) =>
@@ -152,8 +158,12 @@ export function DataProvider({ children }: PropsWithChildren) {
         ),
       completeReminder: (id) =>
         mutate(`/academic-reminder/reminders/${id}/complete`, "PATCH"),
+      uncompleteReminder: (id) =>
+        mutate(`/academic-reminder/reminders/${id}/completion`, "DELETE"),
       deleteReminder: (id) =>
         mutate(`/academic-reminder/reminders/${id}`, "DELETE"),
+      getUpcomingNotifications: () =>
+        call("/academic-reminder/notifications/upcoming"),
       createCategory: (name, color) =>
         mutate("/academic-reminder/priority-categories", "POST", {
           name,
