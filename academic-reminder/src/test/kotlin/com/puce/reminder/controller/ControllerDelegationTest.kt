@@ -48,10 +48,12 @@ class ControllerDelegationTest {
         whenever(service.list(1)).thenReturn(listOf(response))
         whenever(service.update(2, request)).thenReturn(response)
         whenever(service.complete(2)).thenReturn(response.copy(completed = true))
+        whenever(service.uncomplete(2)).thenReturn(response)
 
         assertEquals(2, controller.create(1, request).id)
         assertEquals(2, controller.list(1).single().id)
         assertEquals("Defense", controller.update(2, request).title)
+        assertEquals(false, controller.uncomplete(2).completed)
         assertTrue(controller.complete(2).completed)
         controller.delete(2)
         verify(service).delete(2)
@@ -115,6 +117,7 @@ class ControllerDelegationTest {
         whenever(service.get(6)).thenReturn(response)
         whenever(service.update(6, request)).thenReturn(response.copy(title = "Updated"))
         whenever(service.complete(6)).thenReturn(response.copy(status = ReminderStatus.COMPLETED))
+        whenever(service.uncomplete(6)).thenReturn(response)
         whenever(service.setPriorityOverride(6, 4)).thenReturn(response.copy(customPriority = PriorityCategoryResponse(4, "Critical", "#AA0000", 1)))
 
         assertEquals(6, controller.createPersonal(request).id)
@@ -125,6 +128,7 @@ class ControllerDelegationTest {
         assertEquals(6, controller.get(6).id)
         assertEquals("Updated", controller.update(6, request).title)
         assertEquals(ReminderStatus.COMPLETED, controller.complete(6).status)
+        assertEquals(ReminderStatus.PENDING, controller.uncomplete(6).status)
         assertEquals(4, controller.overridePriority(6, ReminderPriorityOverrideRequest(4)).customPriority?.id)
         controller.delete(6)
         verify(service).delete(6)

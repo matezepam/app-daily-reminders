@@ -8,10 +8,13 @@ import {
   Message,
   Screen,
 } from "@/src/components/Ui";
+import { DateTimeSelector } from "@/src/components/DateTimeSelector";
 import { useData } from "@/src/context/DataContext";
-function tomorrowDate() {
+
+function defaultDueAt() {
   const date = new Date(Date.now() + 86_400_000);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  date.setHours(9, 0, 0, 0);
+  return date;
 }
 export default function NewActivity() {
   const { courseId, id, title: initialTitle, description: initialDescription, dueAt: initialDueAt } =
@@ -28,20 +31,12 @@ export default function NewActivity() {
   const editing = Number.isFinite(editingId);
   const [title, setTitle] = useState(initialTitle ?? "");
   const [description, setDescription] = useState(initialDescription ?? "");
-  const [date, setDate] = useState(
-    parsedDueAt && !isNaN(parsedDueAt.getTime())
-      ? `${parsedDueAt.getFullYear()}-${String(parsedDueAt.getMonth() + 1).padStart(2, "0")}-${String(parsedDueAt.getDate()).padStart(2, "0")}`
-      : tomorrowDate(),
-  );
-  const [time, setTime] = useState(
-    parsedDueAt && !isNaN(parsedDueAt.getTime())
-      ? `${String(parsedDueAt.getHours()).padStart(2, "0")}:${String(parsedDueAt.getMinutes()).padStart(2, "0")}`
-      : "09:00",
+  const [dueAt, setDueAt] = useState(
+    parsedDueAt && !isNaN(parsedDueAt.getTime()) ? parsedDueAt : defaultDueAt(),
   );
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   async function submit() {
-    const dueAt = new Date(`${date}T${time}:00`);
     if (!title.trim() || isNaN(dueAt.getTime()) || dueAt <= new Date()) {
       setError(
         "Completa el título y selecciona una fecha y hora futuras válidas.",
@@ -91,22 +86,7 @@ export default function NewActivity() {
           multiline
           maxLength={1000}
         />
-        <Field
-          label="Fecha límite (AAAA-MM-DD)"
-          icon="calendar-outline"
-          placeholder="2026-08-20"
-          value={date}
-          onChangeText={setDate}
-          keyboardType="numbers-and-punctuation"
-        />
-        <Field
-          label="Hora límite (HH:mm)"
-          icon="time-outline"
-          placeholder="14:30"
-          value={time}
-          onChangeText={setTime}
-          keyboardType="numbers-and-punctuation"
-        />
+        <DateTimeSelector value={dueAt} onChange={setDueAt} />
       </Card>
       {error && <Message>{error}</Message>}
       <Button

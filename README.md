@@ -2,6 +2,19 @@
 
 Aplicación completa para organizar cursos, actividades, asistencia y recordatorios académicos. El repositorio contiene el frontend móvil/web y los dos microservicios del backend final.
 
+## Estado final verificado — 11-08-2026
+
+- Código funcional completo para web y Android: roles `ADMIN`/`STUDENT`, cursos, actividades, asistencia, recordatorios, edición, finalización reversible, historial y centro de avisos interno.
+- Docker Desktop: 7 servicios persistentes en estado `healthy`; las 2 tareas SQL terminan correctamente en `Exited (0)`.
+- Pruebas: 127 de `academic-reminder` + 39 de `users` + 3 de Cognito = **169 aprobadas**, sin fallos.
+- Frontend: TypeScript, ESLint, exportación web y Expo Doctor (18/18) aprobados.
+- AWS: ambos health checks públicos responden correctamente y CloudWatch no registró `ERROR`, excepciones ni respuestas 500 durante la validación final.
+- Web 1.1.0 publicada en CloudFront con respaldo previo e invalidación completada; el bundle contiene únicamente la API pública de AWS.
+- Postman/Newman contra AWS: 59 solicitudes automatizadas, 118 aserciones y 0 fallos; el caso manual de indisponibilidad controlada completa la solicitud 60.
+- El código y las bases no dependen de datos quemados ni de `localhost` en producción. Los datos se conservan en RDS y las credenciales reales no se versionan.
+
+La entrega móvil 1.1.0 usa `versionCode` 2. El build EAS finalizó y el APK fue descargado y verificado localmente. El APK público anterior se conserva hasta que el usuario pruebe la nueva versión en un teléfono real y autorice su publicación.
+
 ## Estructura
 
 ```text
@@ -32,14 +45,16 @@ La actualización conserva los cursos duplicados antiguos y añade su código de
 - Autorización con solo dos roles: `STUDENT` y `ADMIN`; el rol `ADMIN` representa al profesor y no es un superusuario global.
 - Matriz de permisos explícita: ambos roles crean recordatorios personales; solo `ADMIN` crea clases y avisos de clase; solo `STUDENT` se une mediante código.
 - Aislamiento por propietario: cada profesor administra únicamente sus clases y cada usuario únicamente sus recordatorios personales.
-- Edición de actividades, historial de completadas/vencidas y alerta visual durante sus últimas 24 horas.
+- Edición de actividades, historial global de completadas/vencidas y alerta visual durante sus últimas 24 horas.
+- Finalización reversible: el estudiante puede deshacer una actividad o recordatorio marcado por error; el profesor ve quién completó cada actividad y cuándo.
 - Unicidad de cursos por profesor: no se repite la misma combinación normalizada de nombre y descripción.
 - Perfiles de usuario en un microservicio independiente.
 - Creación y unión a cursos mediante código único.
 - Actividades, asistencias y recordatorios personales o de curso.
 - Número de actividad consecutivo por profesor, independiente de la clave primaria global.
-- Selector de estudiantes inscritos y aislamiento de asistencia por usuario.
-- Alertas configurables y prioridades personalizadas.
+- Selector de estudiantes inscritos, tarjetas visuales de estado y aislamiento de asistencia por usuario.
+- Alertas configurables, centro de avisos dentro de la aplicación y prioridades personalizadas, sin alarmas del sistema operativo.
+- Selectores gráficos de fecha/hora en Android y web; no es necesario escribir el formato manualmente.
 - Excepciones propias, manejadores globales, auditoría y logs estructurados.
 - Pruebas unitarias y funcionales en ambos microservicios.
 
@@ -126,7 +141,8 @@ El TLS debe terminar en el balanceador o proxy público de AWS. Las contraseñas
 ### Entorno AWS activo
 
 - Aplicación web: <https://d29ydq13vz3ryv.cloudfront.net>
-- APK Android: <https://d29ydq13vz3ryv.cloudfront.net/AcademicReminder.apk>
+- Portal de descarga Android: <https://d29ydq13vz3ryv.cloudfront.net/download/index.html>
+- APK Android 1.1.0: <https://d29ydq13vz3ryv.cloudfront.net/download/AcademicReminder.apk>
 - API pública: <https://5d1dvnzh90.execute-api.us-east-1.amazonaws.com>
 - Salud: <https://5d1dvnzh90.execute-api.us-east-1.amazonaws.com/health/users> y <https://5d1dvnzh90.execute-api.us-east-1.amazonaws.com/health/academic-reminder>
 
@@ -143,6 +159,7 @@ El bundle público se construye con esas URLs y no contiene referencias al backe
 - [Decisiones de arquitectura](docs/adr/0001-two-cognito-roles.md)
 - [Modelo de negocio](docs/business-model.md)
 - [Guía de defensa](docs/defense-guide.md)
+- [Guía de consultas Postman](docs/postman-guide.md)
 - [Pendientes y traspaso de Jira](docs/jira-handoff.md)
 
 ## Integración continua

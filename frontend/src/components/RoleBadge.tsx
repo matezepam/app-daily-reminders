@@ -5,7 +5,7 @@ import { colors } from "@/src/theme";
 import type { SessionRole } from "@/src/types/auth";
 
 const labels: Record<SessionRole, string> = {
-  ADMIN: "Profesor / administrador",
+  ADMIN: "Profesor / Administrador",
   STUDENT: "Estudiante",
 };
 

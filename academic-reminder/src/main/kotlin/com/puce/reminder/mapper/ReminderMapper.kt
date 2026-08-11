@@ -15,6 +15,7 @@ class ReminderMapper {
         category: PriorityCategoryResponse?,
         editable: Boolean,
         notifications: List<NotificationResponse>,
+        completedAt: java.time.Instant? = null,
     ) = ReminderResponse(
         id = requireNotNull(reminder.id),
         courseId = reminder.course?.id,
@@ -29,6 +30,7 @@ class ReminderMapper {
         status = status,
         editable = editable,
         createdAt = reminder.createdAt,
+        completedAt = completedAt,
         notifications = notifications,
     )
 }

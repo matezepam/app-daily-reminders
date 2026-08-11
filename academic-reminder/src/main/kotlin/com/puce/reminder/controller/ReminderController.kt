@@ -40,6 +40,10 @@ class ReminderController(private val service: ReminderService) {
     @PreAuthorize("hasAnyRole('STUDENT','ADMIN')")
     fun complete(@PathVariable id: Long): ReminderResponse = service.complete(id)
 
+    @DeleteMapping("/reminders/{id}/completion")
+    @PreAuthorize("hasAnyRole('STUDENT','ADMIN')")
+    fun uncomplete(@PathVariable id: Long): ReminderResponse = service.uncomplete(id)
+
     @PatchMapping("/reminders/{id}/priority")
     @PreAuthorize("hasRole('STUDENT')")
     fun overridePriority(

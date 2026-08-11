@@ -57,8 +57,19 @@ class ActivityService(
         val userId = currentUser.id()
         val completionsByActivityId = completions.findAllForCourseAndStudent(courseId, userId)
             .associateBy { requireNotNull(it.activity.id) }
+        val courseCompletionsByActivityId = if (course.professorUserId == userId) {
+            completions.findAllForCourse(courseId).groupBy { requireNotNull(it.activity.id) }
+        } else {
+            emptyMap()
+        }
         return repository.findAllByCourseIdOrderByDueAtAsc(courseId)
-            .map { mapper.toResponse(it, completionsByActivityId[it.id]) }
+            .map {
+                mapper.toResponse(
+                    it,
+                    completionsByActivityId[it.id],
+                    courseCompletionsByActivityId[it.id].orEmpty(),
+                )
+            }
     }
 
     @Transactional
@@ -89,6 +100,28 @@ class ActivityService(
         audit.record(userId, "INSERT", "ActivityCompletion", requireNotNull(completion.id), current = "{\"activityId\":$id}")
         log.info("event=activity.completed | msg=Activity completed | activityId={}", id)
         return mapper.toResponse(activity, completion)
+    }
+
+    @Transactional
+    fun uncomplete(id: Long): ActivityResponse {
+        val activity = find(id)
+        access.requireCanView(activity.course)
+        val userId = currentUser.id()
+        if (!memberships.existsByCourseIdAndStudentUserId(requireNotNull(activity.course.id), userId)) {
+            throw ForbiddenException("Only enrolled students can reopen an activity")
+        }
+        val completion = completions.findByActivityIdAndStudentUserId(id, userId)
+            ?: throw ConflictException("Activity is not completed")
+        completions.delete(completion)
+        audit.record(
+            userId,
+            "DELETE",
+            "ActivityCompletion",
+            requireNotNull(completion.id),
+            previous = "{\"activityId\":$id}",
+        )
+        log.info("event=activity.reopened | msg=Activity completion reverted | activityId={}", id)
+        return mapper.toResponse(activity)
     }
 
     @Transactional

@@ -8,6 +8,7 @@ import { Button, Card, Empty, Header, Screen, SectionTitle } from "@/src/compone
 import { useData } from "@/src/context/DataContext";
 import { colors, shadow } from "@/src/theme";
 import type { Activity } from "@/src/types/domain";
+import type { UserProfile } from "@/src/types/auth";
 import { confirmDestructive } from "@/src/utils/confirm";
 
 const URGENT_WINDOW_MS = 24 * 60 * 60 * 1000;
@@ -34,21 +35,40 @@ function countdown(dueAt: string, now: number) {
 export default function CourseDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const courseId = Number(id);
-  const { courses, getActivities, completeActivity, deleteActivity, deleteCourse } = useData();
+  const {
+    courses,
+    getActivities,
+    getCourseStudents,
+    completeActivity,
+    uncompleteActivity,
+    deleteActivity,
+    deleteCourse,
+  } = useData();
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [students, setStudents] = useState<UserProfile[]>([]);
   const [error, setError] = useState("");
   const [now, setNow] = useState(Date.now());
   const course = courses.find((candidate) => candidate.id === courseId);
 
   const load = useCallback(async () => {
     try {
-      setActivities(await getActivities(courseId));
+      const [nextActivities, nextStudents] = await Promise.all([
+        getActivities(courseId),
+        course?.ownedByMe ? getCourseStudents(courseId) : Promise.resolve([]),
+      ]);
+      setActivities(nextActivities);
+      setStudents(nextStudents);
       setError("");
       setNow(Date.now());
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo cargar.");
     }
-  }, [courseId, getActivities]);
+  }, [course?.ownedByMe, courseId, getActivities, getCourseStudents]);
+
+  const studentNames = useMemo(
+    () => new Map(students.map((student) => [student.cognitoSub, student.fullName])),
+    [students],
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -163,7 +183,9 @@ export default function CourseDetail() {
             activity={activity}
             now={now}
             ownedByMe={course.ownedByMe}
+            studentNames={studentNames}
             onComplete={() => void completeActivity(activity.id).then(load)}
+            onUndo={() => undefined}
             onEdit={() => editActivity(activity)}
             onDelete={() => removeActivity(activity)}
           />
@@ -184,7 +206,9 @@ export default function CourseDetail() {
             activity={activity}
             now={now}
             ownedByMe={course.ownedByMe}
+            studentNames={studentNames}
             onComplete={() => undefined}
+            onUndo={() => void uncompleteActivity(activity.id).then(load)}
             onEdit={() => undefined}
             onDelete={() => removeActivity(activity)}
           />
@@ -202,14 +226,18 @@ function ActivityRow({
   activity,
   now,
   ownedByMe,
+  studentNames,
   onComplete,
+  onUndo,
   onEdit,
   onDelete,
 }: {
   activity: Activity;
   now: number;
   ownedByMe: boolean;
+  studentNames: Map<string, string>;
   onComplete: () => void;
+  onUndo: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -235,6 +263,26 @@ function ActivityRow({
         {activity.completedAt ? (
           <Text style={s.completedAt}>Completada el {new Date(activity.completedAt).toLocaleString("es-EC")}</Text>
         ) : null}
+        {ownedByMe && activity.completions?.length ? (
+          <View style={s.completionHistory}>
+            <Text style={s.completionHeading}>
+              {activity.completionCount} estudiante{activity.completionCount === 1 ? "" : "s"} completó
+            </Text>
+            {activity.completions.map((completion) => (
+              <View key={completion.studentUserId} style={s.completionRow}>
+                <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+                <View style={{ flex: 1 }}>
+                  <Text style={s.studentName}>
+                    {studentNames.get(completion.studentUserId) ?? "Estudiante"}
+                  </Text>
+                  <Text style={s.completionDate}>
+                    {new Date(completion.completedAt).toLocaleString("es-EC")}
+                  </Text>
+                </View>
+              </View>
+            ))}
+          </View>
+        ) : null}
         <View style={[s.statusPill, { backgroundColor: meta.background }]}>
           <Text style={[s.status, { color: meta.color }]}>{meta.label}</Text>
         </View>
@@ -242,6 +290,12 @@ function ActivityRow({
       {!ownedByMe && state !== "completed" && state !== "overdue" ? (
         <Pressable accessibilityLabel="Marcar actividad como completada" onPress={onComplete} style={s.check}>
           <Ionicons name="checkmark" size={22} color="white" />
+        </Pressable>
+      ) : null}
+      {!ownedByMe && state === "completed" ? (
+        <Pressable accessibilityLabel="Deshacer actividad completada" onPress={onUndo} style={s.undo}>
+          <Ionicons name="arrow-undo" size={19} color={colors.blue} />
+          <Text style={s.undoText}>Deshacer</Text>
         </Pressable>
       ) : null}
       {ownedByMe ? (
@@ -279,9 +333,16 @@ const s = StyleSheet.create({
   description: { fontSize: 12, lineHeight: 17, color: colors.text },
   activityMeta: { fontSize: 11, color: colors.muted },
   completedAt: { fontSize: 11, color: colors.success },
+  completionHistory: { gap: 7, marginTop: 6, paddingTop: 8, borderTopWidth: 1, borderTopColor: colors.lineSoft },
+  completionHeading: { color: colors.navy, fontSize: 12, fontWeight: "900" },
+  completionRow: { flexDirection: "row", alignItems: "center", gap: 7 },
+  studentName: { color: colors.text, fontSize: 12, fontWeight: "800" },
+  completionDate: { color: colors.muted, fontSize: 10, marginTop: 1 },
   statusPill: { alignSelf: "flex-start", borderRadius: 99, paddingHorizontal: 9, paddingVertical: 5, marginTop: 2 },
   status: { fontSize: 11, fontWeight: "900" },
   check: { width: 38, height: 38, borderRadius: 13, backgroundColor: colors.success, alignItems: "center", justifyContent: "center" },
+  undo: { alignItems: "center", gap: 2, paddingHorizontal: 3, paddingVertical: 5 },
+  undoText: { color: colors.blue, fontSize: 9, fontWeight: "900" },
   rowActions: { gap: 7 },
   iconButton: { width: 36, height: 36, borderRadius: 12, backgroundColor: colors.blueSoft, alignItems: "center", justifyContent: "center" },
   deleteButton: { backgroundColor: colors.dangerPale },

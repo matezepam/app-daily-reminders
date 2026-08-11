@@ -67,7 +67,13 @@ export function Header({
   return (
     <View style={s.header}>
       {back && (
-        <Pressable accessibilityLabel="Volver" onPress={back} style={s.back}>
+        <Pressable
+          accessibilityLabel="Volver"
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={back}
+          style={s.back}
+        >
           <Ionicons name="chevron-back" size={23} color={colors.navy} />
         </Pressable>
       )}

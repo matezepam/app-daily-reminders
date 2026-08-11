@@ -22,4 +22,15 @@ interface ActivityCompletionRepository : JpaRepository<ActivityCompletion, Long>
         @Param("courseId") courseId: Long,
         @Param("studentUserId") studentUserId: String,
     ): List<ActivityCompletion>
+
+    @Query(
+        """
+        select completion
+        from ActivityCompletion completion
+        join fetch completion.activity activity
+        where activity.course.id = :courseId
+        order by completion.completedAt desc
+        """,
+    )
+    fun findAllForCourse(@Param("courseId") courseId: Long): List<ActivityCompletion>
 }

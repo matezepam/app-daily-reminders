@@ -8,13 +8,13 @@ No se deben inventar claves ni marcar historias como terminadas sin revisar el t
 | Matriz ADMIN/STUDENT | Tabla de permisos y casos 401/403. |
 | Gestión de cursos | Propiedad del profesor, código de unión y rechazo de duplicado normalizado 409. |
 | Recordatorios personales | Creación por ambos roles, edición, prioridad, finalización e historial. |
-| Avisos y actividades de clase | CRUD del profesor, consulta/finalización del estudiante y urgencia de 24 h. |
+| Avisos y actividades de clase | CRUD del profesor, consulta/finalización reversible del estudiante, historial de quién completó y urgencia de 24 h. |
 | Numeración de actividad | Secuencia visible independiente por profesor y prueba concurrente/atómica. |
 | Asistencia | Solo inscritos y solo profesor propietario. |
 | Backend y base externa | Docker, RDS privado, SQL sin Flyway, secretos e idempotencia. |
 | Despliegue web | S3/CloudFront y API HTTPS sin localhost. |
 | APK Android | Build EAS, instalación real y enlace AWS. |
-| Calidad | 147 pruebas backend + 3 Lambda, cobertura, Newman 53/106, cero 500 y logs limpios. |
+| Calidad | 166 pruebas backend + 3 Lambda, cobertura, colección Postman 60 solicitudes, cero 500 y logs limpios. |
 | Infraestructura Cognito como código | Corregir la plantilla legacy del stack para que una actualización futura no restaure `PROFESSOR`/`USER`; conservar la prueba y el despliegue de `cognito-registration`. |
 | Documentación de defensa | RF/RNF, casos, ADR, arquitectura, escalamiento, Canvas y finanzas. |
 
@@ -27,7 +27,7 @@ Historias existentes que deben ampliarse con los criterios y evidencias de esta 
 - `SCRUM-26` / HU-07: crear curso y rechazar con 409 nombre+descripción duplicados normalizados.
 - `SCRUM-20` / HU-12: publicar y editar actividades, numeración visible independiente por profesor y urgencia menor a 24 horas.
 - `SCRUM-22`, `SCRUM-28`, `SCRUM-31`, `SCRUM-30`, `SCRUM-32` y `SCRUM-34`: CRUD, listado, historial y categorías de recordatorios personales para ambos roles.
-- `SCRUM-27` / HU-17: completar actividad sin perder el historial.
+- `SCRUM-27` / HU-17: completar/deshacer actividad, conservar fecha y mostrar al profesor quién la completó.
 - `SCRUM-19` / HU-24: vencimiento automático y presentación visual del estado vencido.
 - `SCRUM-97`, `SCRUM-98`, `SCRUM-99` y `SCRUM-100`: perfil, detalle del curso, asistencia y calendario.
 
@@ -37,7 +37,7 @@ Historias técnicas nuevas que conviene agregar:
 - Orquestación local Docker Compose con siete servicios persistentes visibles en Docker Desktop, dos trabajos de inicialización y logs/health checks.
 - Gateway Nginx para frontend, usuarios y API académica sin dependencias de `localhost` en producción.
 - Despliegue AWS con Cognito, API Gateway, EC2, RDS privado, S3/CloudFront, CloudWatch y secretos en SSM/Secrets Manager.
-- Pipeline CI, prueba de 147 casos backend + 3 Lambda, cobertura JaCoCo, TypeScript/lint/export web y Newman con 53 solicitudes/106 aserciones/0 fallos/0 respuestas 500.
+- Pipeline CI, prueba de 166 casos backend + 3 Lambda, cobertura JaCoCo, TypeScript/lint/export web y Postman/Newman con 60 solicitudes y aserción global de cero respuestas 500.
 - Generación, firma, instalación y distribución del APK con Expo EAS y CloudFront.
 - Documentación de arquitectura, ADR, RF/RNF, escalamiento, seguridad, Canvas, finanzas y evidencia de rúbrica.
 - Migración controlada de Expo SDK 54 y dependencias transitivas como deuda técnica posterior.
