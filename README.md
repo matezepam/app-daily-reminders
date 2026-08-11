@@ -13,7 +13,7 @@ Aplicación completa para organizar cursos, actividades, asistencia y recordator
 - Postman/Newman contra AWS: 59 solicitudes automatizadas, 118 aserciones y 0 fallos; el caso manual de indisponibilidad controlada completa la solicitud 60.
 - El código y las bases no dependen de datos quemados ni de `localhost` en producción. Los datos se conservan en RDS y las credenciales reales no se versionan.
 
-La entrega móvil 1.1.0 usa `versionCode` 2. El APK público anterior se conserva hasta que el nuevo artefacto EAS termine, se verifique y el usuario lo apruebe en un teléfono real.
+La entrega móvil 1.1.0 usa `versionCode` 2. El build EAS finalizó y el APK fue descargado y verificado localmente. El APK público anterior se conserva hasta que el usuario pruebe la nueva versión en un teléfono real y autorice su publicación.
 
 ## Estructura
 

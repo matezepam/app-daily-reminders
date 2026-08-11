@@ -24,7 +24,7 @@
 | Frontend | TypeScript, lint y export web aprobados |
 | CloudFront | Web 1.1.0: `index.html` y `entry-3225db8c6a03a566aa9524845089ae02.js` HTTP 200 |
 | Referencias de backend local en bundle público | 0 |
-| APK Android | APK público 1.0.0 verificado; build EAS 1.1.0/versionCode 2 solicitado para aceptación final |
+| APK Android | EAS 1.1.0/versionCode 2 `FINISHED`; paquete, firma v2, hash, AWS y ausencia de URLs locales verificados |
 
 ## Dependencias del frontend
 

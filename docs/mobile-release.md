@@ -53,15 +53,21 @@ También bloquea acciones repetidas mientras una finalización, reapertura o eli
 - EAS build ID: `9d1f7a62-c2d7-4eb2-98c7-03d03cc5c514`
 - Perfil: `production-apk`
 - Versión: `1.1.0` / version code `2`
-- Estado documentado al 11-08-2026: en cola de EAS; no se inició un build duplicado.
+- Estado EAS: `FINISHED` el 11-08-2026; no se inició un build duplicado.
+- Paquete verificado: `ec.edu.puce.dailyreminder`; target SDK 36.
+- Firma: APK Signature Scheme v2, RSA 2048; certificado SHA-256 `1722e22f73c20efc7a5c507dd0cd37a5397154523d482f35580f166b3d8a7a21`.
+- Archivo local: `C:\Users\Asus\Downloads\AcademicReminder-1.1.0.apk`.
+- Tamaño: `84.353.745` bytes.
+- SHA-256: `264f6cd78bbb35a149b7a4ee29332aa22ad67383f08abf67e5deb75aa50b14b7`.
+- Bundle Android: contiene API Gateway y Cognito de producción; no contiene `localhost:9090` ni `10.0.2.2:9090`.
 
 Orden obligatorio solicitado por el usuario:
 
 1. [x] Validar la interfaz autenticada en Docker local.
 2. [x] Corregir y repetir el flujo completar/deshacer sin conflictos.
 3. [x] Desplegar el backend compatible en AWS y comprobar ambos health checks, Postman y CloudWatch.
-4. [ ] Generar el APK 1.1.0 y descargarlo localmente.
-5. [ ] Entregar el APK al usuario para instalación y prueba; todavía no publicarlo.
+4. [x] Generar el APK 1.1.0, descargarlo y verificar paquete, versión, firma, hash y configuración AWS.
+5. [ ] Instalar el APK en un teléfono y completar la aceptación del usuario; todavía no publicarlo.
 6. [ ] Solo después de la aprobación, respaldar y reemplazar `AcademicReminder.apk` en S3/CloudFront.
 
 ## Prueba final en un teléfono
