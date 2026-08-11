@@ -1,15 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
+import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { Button, Card, Empty, Header, Screen } from "@/src/components/Ui";
+import { Button, Card, Empty, Header, Message, Screen } from "@/src/components/Ui";
 import { useAuth } from "@/src/context/AuthContext";
 import { useData } from "@/src/context/DataContext";
 import { colors, priorityMeta, typeMeta } from "@/src/theme";
 import { confirmDestructive } from "@/src/utils/confirm";
 export default function ReminderDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const [action, setAction] = useState<"complete" | "uncomplete" | "delete" | null>(null);
+  const [actionError, setActionError] = useState("");
   const { session } = useAuth();
-  const { dashboard, completeReminder, deleteReminder } = useData();
+  const { dashboard, completeReminder, uncompleteReminder, deleteReminder } = useData();
   const r = dashboard.reminders.find((x) => x.id === Number(id));
   if (!r)
     return (
@@ -29,12 +32,54 @@ export default function ReminderDetail() {
       }
     : priorityMeta[r.priority];
   const type = typeMeta[r.type];
+  const runAction = async (
+    nextAction: "complete" | "uncomplete" | "delete",
+    operation: () => Promise<unknown>,
+  ) => {
+    if (action) return;
+    setActionError("");
+    setAction(nextAction);
+    try {
+      await operation();
+      router.back();
+    } catch (error) {
+      setActionError(
+        error instanceof Error ? error.message : "No se pudo completar la acción.",
+      );
+    } finally {
+      setAction(null);
+    }
+  };
   const remove = () =>
     confirmDestructive({
       title: "Eliminar recordatorio",
       message: "Esta acción no se puede deshacer.",
-      onConfirm: () => void deleteReminder(r.id).then(() => router.back()),
+      onConfirm: () => void runAction("delete", () => deleteReminder(r.id)),
     });
+  const edit = () => {
+    const offsets = r.notifications
+      .map((notification) =>
+        Math.round(
+          (new Date(r.dueAt).getTime() - new Date(notification.notifyAt).getTime()) /
+            60_000,
+        ),
+      )
+      .filter((minutes) => minutes > 0);
+    router.push({
+      pathname: "/reminder/new",
+      params: {
+        id: String(r.id),
+        courseId: r.courseId ? String(r.courseId) : undefined,
+        title: r.title,
+        description: r.description ?? "",
+        dueAt: r.dueAt,
+        type: r.type,
+        priority: r.priority,
+        categoryId: r.customPriority ? String(r.customPriority.id) : undefined,
+        offsets: offsets.join(","),
+      },
+    });
+  };
   return (
     <Screen>
       <Header
@@ -63,6 +108,16 @@ export default function ReminderDetail() {
             timeStyle: "short",
           })}
         />
+        {r.completedAt ? (
+          <Info
+            icon="time-outline"
+            label="Finalizado el"
+            value={new Date(r.completedAt).toLocaleString("es-EC", {
+              dateStyle: "long",
+              timeStyle: "short",
+            })}
+          />
+        ) : null}
         <Info icon="library-outline" label="Tipo" value={type.label} />
         <Info
           icon="checkmark-circle-outline"
@@ -83,21 +138,48 @@ export default function ReminderDetail() {
           />
         )}
       </Card>
+      {actionError ? <Message>{actionError}</Message> : null}
       {r.status === "PENDING" &&
         (session?.profile.role === "STUDENT" || r.personal) && (
         <Button
           title="Marcar como completado"
           icon="checkmark-circle-outline"
-          onPress={() => void completeReminder(r.id).then(() => router.back())}
+          loading={action === "complete"}
+          disabled={action !== null}
+          onPress={() => void runAction("complete", () => completeReminder(r.id))}
         />
       )}{" "}
+      {r.status === "COMPLETED" &&
+        (session?.profile.role === "STUDENT" || r.personal) && (
+          <Button
+            title="Deshacer finalización"
+            variant="soft"
+            icon="arrow-undo"
+            loading={action === "uncomplete"}
+            disabled={action !== null}
+            onPress={() => void runAction("uncomplete", () => uncompleteReminder(r.id))}
+          />
+        )}
       {r.editable && (
-        <Button
-          title="Eliminar recordatorio"
-          variant="danger"
-          icon="trash-outline"
-          onPress={remove}
-        />
+        <View style={s.actions}>
+          {r.status === "PENDING" ? (
+            <Button
+              title="Editar recordatorio"
+              variant="soft"
+              icon="create-outline"
+              disabled={action !== null}
+              onPress={edit}
+            />
+          ) : null}
+          <Button
+            title="Eliminar recordatorio"
+            variant="danger"
+            icon="trash-outline"
+            loading={action === "delete"}
+            disabled={action !== null}
+            onPress={remove}
+          />
+        </View>
       )}
     </Screen>
   );
@@ -124,6 +206,7 @@ function Info({
   );
 }
 const s = StyleSheet.create({
+  actions: { gap: 10 },
   hero: { alignItems: "center", gap: 10, paddingVertical: 8 },
   icon: {
     width: 72,

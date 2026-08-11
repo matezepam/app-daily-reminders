@@ -2,12 +2,18 @@ package com.puce.reminder.repository
 
 import com.puce.reminder.entity.Reminder
 import com.puce.reminder.entity.ReminderStatus
+import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
+import org.springframework.data.jpa.repository.Lock
 import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import java.time.Instant
 
 interface ReminderRepository : JpaRepository<Reminder, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select r from Reminder r where r.id = :id")
+    fun findByIdForUpdate(id: Long): Reminder?
+
     fun findAllByCourseIdOrderByDueAtAsc(courseId: Long): List<Reminder>
     fun findAllByOwnerUserIdOrderByDueAtAsc(ownerUserId: String): List<Reminder>
 

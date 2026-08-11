@@ -19,11 +19,28 @@ El artefacto esperado por defecto es `releases/current.zip` dentro del bucket cr
 ## Despliegue activo
 
 - Frontend: <https://d29ydq13vz3ryv.cloudfront.net>
+- Portal de descarga: <https://d29ydq13vz3ryv.cloudfront.net/download/index.html>
+- APK Android 1.1.0: <https://d29ydq13vz3ryv.cloudfront.net/download/AcademicReminder.apk>
 - API: <https://5d1dvnzh90.execute-api.us-east-1.amazonaws.com>
 - Salud usuarios: <https://5d1dvnzh90.execute-api.us-east-1.amazonaws.com/health/users>
 - Salud académica: <https://5d1dvnzh90.execute-api.us-east-1.amazonaws.com/health/academic-reminder>
 
 La instancia se administra con Systems Manager y no expone SSH. RDS es privado; por tanto, ni Postman ni la aplicación se conectan directamente a PostgreSQL.
+
+El portal de descarga se publica bajo el prefijo `download/` del bucket existente. `download/index.html` y `download/AcademicReminder.apk` quedan juntos para que los enlaces relativos funcionen, sin reemplazar la aplicación web de la raíz. El APK se sirve con `application/vnd.android.package-archive`, descarga como `AcademicReminder-1.1.0.apk` y conserva versión y SHA-256 en sus metadatos S3.
+
+## Estado verificado — 11-08-2026
+
+- Backend desplegado mediante el artefacto versionado `releases/current.zip` y AWS Systems Manager.
+- Contenedores `users`, `academic-reminder` y `nginx` saludables; ambas tareas de preparación SQL finalizaron con código 0.
+- Los dos endpoints de salud públicos respondieron `UP` después del despliegue.
+- La web 1.1.0 se respaldó en `backups/web/20260811T194121Z/`, se publicó sin `--delete` y la invalidación CloudFront `IE1G21OQ6O6ZQ3K8RP6YSW40GO` terminó correctamente.
+- El APK público anterior quedó intacto durante la publicación web: 84.863.125 bytes, ETag `7b630c23d47e973ca621d0cf92431bcd`.
+- Una consulta exacta de CloudWatch posterior al despliegue no encontró eventos `ERROR`, excepciones ni respuestas HTTP 500.
+- Newman ejecutó 59 solicitudes automatizadas y 118 aserciones contra API Gateway, con 0 fallos y 0 respuestas 500.
+- Los datos sintéticos de la validación se eliminaron; los datos reales permanecen en RDS y no dependen de Docker Desktop.
+
+Postman se ejecuta desde cualquier computadora importando `postman/academic-reminder.postman_collection.json` y `postman/academic-reminder-aws.postman_environment.json`. El ambiente contiene solo URLs e identificadores públicos; usuario, contraseña y tokens se completan localmente y nunca se guardan en Git.
 
 ## Registro Cognito de los dos roles
 

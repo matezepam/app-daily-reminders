@@ -25,6 +25,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Instant
 
@@ -92,6 +93,15 @@ class ReminderSecurityTest(@Autowired private val mvc: MockMvc) {
         mvc.perform(
             patch("/academic-reminder/reminders/8/complete")
                 .with(role("professor-1", "ROLE_ADMIN")),
+        ).andExpect(status().isOk)
+    }
+
+    @Test
+    fun `student can reopen completed reminder`() {
+        whenever(service.uncomplete(8)).thenReturn(response())
+        mvc.perform(
+            delete("/academic-reminder/reminders/8/completion")
+                .with(role("student-1", "ROLE_STUDENT")),
         ).andExpect(status().isOk)
     }
 

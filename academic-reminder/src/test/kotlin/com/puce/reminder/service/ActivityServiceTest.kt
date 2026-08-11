@@ -47,6 +47,27 @@ class ActivityServiceTest {
     }
 
     @Test
+    fun `a new professor starts visible activity numbering at one`() {
+        val secondCourse = Course(id = 3, name = "Databases", joinCode = "DBS-12345", professorUserId = "professor-2")
+        whenever(courses.find(1)).thenReturn(course)
+        whenever(courses.find(3)).thenReturn(secondCourse)
+        whenever(currentUser.id()).thenReturn("professor-1", "professor-1", "professor-2", "professor-2")
+        whenever(repository.nextActivityNumber("professor-1")).thenReturn(17)
+        whenever(repository.nextActivityNumber("professor-2")).thenReturn(1)
+        whenever(repository.save(any<Activity>())).thenAnswer { invocation ->
+            invocation.getArgument<Activity>(0).apply { id = if (createdByUserId == "professor-1") 20 else 21 }
+        }
+
+        val existingProfessor = service.create(1, ActivityRequest("Existing sequence", null, Instant.now().plusSeconds(3600)))
+        val newProfessor = service.create(3, ActivityRequest("First activity", null, Instant.now().plusSeconds(3600)))
+
+        assertEquals(17, existingProfessor.activityNumber)
+        assertEquals(1, newProfessor.activityNumber)
+        verify(repository).nextActivityNumber("professor-1")
+        verify(repository).nextActivityNumber("professor-2")
+    }
+
+    @Test
     fun `duplicate completion returns conflict`() {
         val activity = Activity(course, "Final project", null, Instant.now().plusSeconds(3600), "professor-1", id = 2)
         whenever(repository.findById(2)).thenReturn(java.util.Optional.of(activity))
@@ -69,6 +90,24 @@ class ActivityServiceTest {
         assertTrue(response.completed)
         assertEquals(completedAt, response.completedAt)
         verify(access).requireCanView(course)
+    }
+
+    @Test
+    fun `professor sees completion history for enrolled students`() {
+        val activity = Activity(course, "Final project", null, Instant.now().plusSeconds(3600), "professor-1", id = 2)
+        val first = ActivityCompletion(activity, "student-1", id = 8, completedAt = Instant.now().minusSeconds(120))
+        val second = ActivityCompletion(activity, "student-2", id = 9, completedAt = Instant.now().minusSeconds(60))
+        whenever(courses.find(1)).thenReturn(course)
+        whenever(currentUser.id()).thenReturn("professor-1")
+        whenever(repository.findAllByCourseIdOrderByDueAtAsc(1)).thenReturn(listOf(activity))
+        whenever(completions.findAllForCourseAndStudent(1, "professor-1")).thenReturn(emptyList())
+        whenever(completions.findAllForCourse(1)).thenReturn(listOf(second, first))
+
+        val response = service.list(1).single()
+
+        assertEquals(2, response.completionCount)
+        assertEquals(listOf("student-2", "student-1"), response.completions.map { it.studentUserId })
+        assertEquals(false, response.completed)
     }
 
     @Test
@@ -95,6 +134,43 @@ class ActivityServiceTest {
         assertTrue(response.completed)
         assertEquals(true, response.completedAt != null)
         verify(audit).record(eq("student-1"), eq("INSERT"), eq("ActivityCompletion"), eq(6L), isNull(), any())
+    }
+
+    @Test
+    fun `student can revert an accidental completion`() {
+        val activity = Activity(course, "Final project", null, Instant.now().plusSeconds(3600), "professor-1", id = 2)
+        val completion = ActivityCompletion(activity, "student-1", id = 6)
+        whenever(repository.findById(2)).thenReturn(java.util.Optional.of(activity))
+        whenever(currentUser.id()).thenReturn("student-1")
+        whenever(memberships.existsByCourseIdAndStudentUserId(1, "student-1")).thenReturn(true)
+        whenever(completions.findByActivityIdAndStudentUserId(2, "student-1")).thenReturn(completion)
+
+        val response = service.uncomplete(2)
+
+        assertEquals(false, response.completed)
+        verify(completions).delete(completion)
+        verify(audit).record(eq("student-1"), eq("DELETE"), eq("ActivityCompletion"), eq(6L), any(), isNull())
+    }
+
+    @Test
+    fun `reverting a pending activity returns conflict`() {
+        val activity = Activity(course, "Final project", null, Instant.now().plusSeconds(3600), "professor-1", id = 2)
+        whenever(repository.findById(2)).thenReturn(java.util.Optional.of(activity))
+        whenever(currentUser.id()).thenReturn("student-1")
+        whenever(memberships.existsByCourseIdAndStudentUserId(1, "student-1")).thenReturn(true)
+        whenever(completions.findByActivityIdAndStudentUserId(2, "student-1")).thenReturn(null)
+
+        assertThrows(ConflictException::class.java) { service.uncomplete(2) }
+    }
+
+    @Test
+    fun `non enrolled user cannot revert an activity completion`() {
+        val activity = Activity(course, "Final project", null, Instant.now().plusSeconds(3600), "professor-1", id = 2)
+        whenever(repository.findById(2)).thenReturn(java.util.Optional.of(activity))
+        whenever(currentUser.id()).thenReturn("outsider")
+        whenever(memberships.existsByCourseIdAndStudentUserId(1, "outsider")).thenReturn(false)
+
+        assertThrows(ForbiddenException::class.java) { service.uncomplete(2) }
     }
 
     @Test

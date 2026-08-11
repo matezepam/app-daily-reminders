@@ -12,6 +12,7 @@ import {
   Message,
   Screen,
 } from "@/src/components/Ui";
+import { DateTimeSelector } from "@/src/components/DateTimeSelector";
 import { useData } from "@/src/context/DataContext";
 import { colors, priorityMeta, typeMeta } from "@/src/theme";
 import type { ReminderPriority, ReminderType } from "@/src/types/domain";
@@ -20,9 +21,10 @@ const reminderTypes = Object.keys(typeMeta) as ReminderType[];
 const priorities = Object.keys(priorityMeta) as ReminderPriority[];
 const quickOffsets = [5, 10, 20, 40];
 
-function tomorrowDate() {
+function defaultDueAt() {
   const date = new Date(Date.now() + 86_400_000);
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+  date.setHours(9, 0, 0, 0);
+  return date;
 }
 
 function offsetLabel(minutes: number) {
@@ -35,16 +37,39 @@ function offsetLabel(minutes: number) {
 }
 
 export default function NewReminder() {
-  const { courseId } = useLocalSearchParams<{ courseId?: string }>();
+  const params = useLocalSearchParams<{
+    courseId?: string;
+    id?: string;
+    title?: string;
+    description?: string;
+    dueAt?: string;
+    type?: ReminderType;
+    priority?: ReminderPriority;
+    categoryId?: string;
+    offsets?: string;
+  }>();
+  const { courseId } = params;
   const { categories, saveReminder } = useData();
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [date, setDate] = useState(tomorrowDate());
-  const [time, setTime] = useState("09:00");
-  const [type, setType] = useState<ReminderType>("TASK");
-  const [priority, setPriority] = useState<ReminderPriority>("MEDIUM");
-  const [categoryId, setCategoryId] = useState<number | null>(null);
-  const [offsets, setOffsets] = useState<number[]>([10]);
+  const editingId = params.id ? Number(params.id) : undefined;
+  const editing = Number.isFinite(editingId);
+  const parsedDueAt = params.dueAt ? new Date(params.dueAt) : null;
+  const initialOffsets = params.offsets
+    ?.split(",")
+    .map(Number)
+    .filter((value) => Number.isInteger(value) && value > 0);
+  const [title, setTitle] = useState(params.title ?? "");
+  const [description, setDescription] = useState(params.description ?? "");
+  const [dueAt, setDueAt] = useState(
+    parsedDueAt && !isNaN(parsedDueAt.getTime()) ? parsedDueAt : defaultDueAt(),
+  );
+  const [type, setType] = useState<ReminderType>(params.type ?? "TASK");
+  const [priority, setPriority] = useState<ReminderPriority>(params.priority ?? "MEDIUM");
+  const [categoryId, setCategoryId] = useState<number | null>(
+    params.categoryId ? Number(params.categoryId) : null,
+  );
+  const [offsets, setOffsets] = useState<number[]>(
+    initialOffsets?.length ? initialOffsets : [10],
+  );
   const [customOffset, setCustomOffset] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -75,8 +100,19 @@ export default function NewReminder() {
     setError("");
   }
 
+  function leaveForm() {
+    if (editing && editingId !== undefined) {
+      router.replace(`/reminder/${editingId}`);
+      return;
+    }
+    if (courseId) {
+      router.replace(`/course/${courseId}`);
+      return;
+    }
+    router.replace("/(tabs)");
+  }
+
   async function submit() {
-    const dueAt = new Date(`${date}T${time}:00`);
     if (!title.trim()) {
       setError("Escribe un título para identificar el recordatorio.");
       return;
@@ -114,6 +150,7 @@ export default function NewReminder() {
           notificationOffsetsMinutes: [...offsets].sort((a, b) => a - b),
         },
         courseId ? Number(courseId) : undefined,
+        editing ? editingId : undefined,
       );
       router.replace(`/reminder/${saved.id}`);
     } catch (cause) {
@@ -126,17 +163,21 @@ export default function NewReminder() {
   return (
     <Screen>
       <Header
-        title="Nuevo recordatorio"
+        title={editing ? "Editar recordatorio" : "Nuevo recordatorio"}
         subtitle={
-          courseId
+          editing
+            ? "Actualiza sus datos y programación"
+            : courseId
             ? "Se publicará para todo el curso"
             : "Solo será visible para ti"
         }
-        back={() => router.back()}
+        back={leaveForm}
       />
 
       <Message type="info">
-        {courseId
+        {editing
+          ? "Los cambios se guardarán en tu cuenta y conservarán el historial."
+          : courseId
           ? "Este aviso llegará a los estudiantes inscritos en la clase."
           : "Este recordatorio es personal y solo aparecerá en tu cuenta."}
       </Message>
@@ -162,28 +203,7 @@ export default function NewReminder() {
           multiline
           maxLength={500}
         />
-        <View style={styles.dateRow}>
-          <View style={styles.dateField}>
-            <Field
-              label="Fecha"
-              icon="calendar-outline"
-              placeholder="AAAA-MM-DD"
-              value={date}
-              onChangeText={setDate}
-              keyboardType="numbers-and-punctuation"
-            />
-          </View>
-          <View style={styles.timeField}>
-            <Field
-              label="Hora"
-              icon="time-outline"
-              placeholder="HH:mm"
-              value={time}
-              onChangeText={setTime}
-              keyboardType="numbers-and-punctuation"
-            />
-          </View>
-        </View>
+        <DateTimeSelector value={dueAt} onChange={setDueAt} />
       </Card>
 
       <Card>
@@ -317,7 +337,7 @@ export default function NewReminder() {
 
       {error ? <Message>{error}</Message> : null}
       <Button
-        title={courseId ? "Publicar aviso" : "Crear recordatorio"}
+        title={editing ? "Guardar cambios" : courseId ? "Publicar aviso" : "Crear recordatorio"}
         icon="save-outline"
         loading={busy}
         onPress={() => void submit()}
@@ -327,9 +347,6 @@ export default function NewReminder() {
 }
 
 const styles = StyleSheet.create({
-  dateRow: { flexDirection: "row", gap: 10 },
-  dateField: { flex: 1.25 },
-  timeField: { flex: 0.85 },
   sectionTitle: {
     color: colors.navy,
     fontSize: 16,

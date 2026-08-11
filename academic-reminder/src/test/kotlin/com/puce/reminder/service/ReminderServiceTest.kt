@@ -4,6 +4,7 @@ import com.puce.reminder.audit.AuditService
 import com.puce.reminder.config.CurrentUser
 import com.puce.reminder.dto.ReminderRequest
 import com.puce.reminder.dto.CourseResponse
+import com.puce.reminder.dto.NotificationResponse
 import com.puce.reminder.entity.Reminder
 import com.puce.reminder.entity.ReminderPriority
 import com.puce.reminder.entity.ReminderStatus
@@ -51,12 +52,115 @@ class ReminderServiceTest {
     @Test
     fun `completes own personal reminder`() {
         val reminder = Reminder(id = 8, ownerUserId = "student-1", createdByUserId = "student-1", title = "Review", type = ReminderType.TASK, dueAt = Instant.now().plusSeconds(3600))
-        whenever(reminders.findById(8)).thenReturn(Optional.of(reminder))
+        whenever(reminders.findByIdForUpdate(8)).thenReturn(reminder)
+        whenever(reminders.save(reminder)).thenReturn(reminder)
         whenever(currentUser.id()).thenReturn("student-1")
         whenever(notifications.list(8)).thenReturn(emptyList())
         val response = service.complete(8)
         assertEquals(ReminderStatus.COMPLETED, response.status)
         verify(notifications).cancelFuture(8, "student-1")
+    }
+
+    @Test
+    fun `reopens personal reminder and restores its future notification schedule`() {
+        val dueAt = Instant.now().plusSeconds(3600)
+        val reminder = Reminder(
+            id = 8,
+            ownerUserId = "student-1",
+            createdByUserId = "student-1",
+            title = "Review",
+            type = ReminderType.TASK,
+            dueAt = dueAt,
+            status = ReminderStatus.COMPLETED,
+        )
+        whenever(reminders.findByIdForUpdate(8)).thenReturn(reminder)
+        whenever(reminders.save(reminder)).thenReturn(reminder)
+        whenever(currentUser.id()).thenReturn("student-1")
+        whenever(notifications.list(8)).thenReturn(
+            listOf(NotificationResponse(4, 8, dueAt.minusSeconds(600), sent = false, cancelled = true)),
+        )
+
+        val response = service.uncomplete(8)
+
+        assertEquals(ReminderStatus.PENDING, response.status)
+        assertEquals(null, response.completedAt)
+        verify(notifications).replaceFor(reminder, "student-1", setOf(10))
+    }
+
+    @Test
+    fun `expired reminder cannot be reopened`() {
+        val reminder = Reminder(
+            id = 8,
+            ownerUserId = "student-1",
+            createdByUserId = "student-1",
+            title = "Review",
+            type = ReminderType.TASK,
+            dueAt = Instant.now().minusSeconds(1),
+            status = ReminderStatus.COMPLETED,
+        )
+        whenever(reminders.findByIdForUpdate(8)).thenReturn(reminder)
+        whenever(currentUser.id()).thenReturn("student-1")
+
+        assertThrows(BadRequestException::class.java) { service.uncomplete(8) }
+    }
+
+    @Test
+    fun `student reopens completed course reminder`() {
+        val course = Course(id = 2, name = "Architecture", joinCode = "ARC-12345", professorUserId = "professor-1")
+        val reminder = Reminder(id = 9, course = course, createdByUserId = "professor-1", title = "Review", type = ReminderType.TASK, dueAt = Instant.now().plusSeconds(3600))
+        val state = StudentReminderState(id = 12, reminder = reminder, studentUserId = "student-1", completedAt = Instant.now())
+        whenever(reminders.findByIdForUpdate(9)).thenReturn(reminder)
+        whenever(currentUser.id()).thenReturn("student-1")
+        whenever(memberships.existsByCourseIdAndStudentUserId(2, "student-1")).thenReturn(true)
+        whenever(states.findByReminderIdAndStudentUserId(9, "student-1")).thenReturn(state)
+        whenever(states.save(state)).thenReturn(state)
+        whenever(notifications.list(9)).thenReturn(emptyList())
+
+        val response = service.uncomplete(9)
+
+        assertEquals(ReminderStatus.PENDING, response.status)
+        assertEquals(null, state.completedAt)
+        verify(states).save(state)
+        verify(notifications).replaceFor(reminder, "student-1", emptySet())
+    }
+
+    @Test
+    fun `non member cannot reopen course reminder`() {
+        val course = Course(id = 2, name = "Architecture", joinCode = "ARC-12345", professorUserId = "professor-1")
+        val reminder = Reminder(id = 9, course = course, createdByUserId = "professor-1", title = "Review", type = ReminderType.TASK, dueAt = Instant.now().plusSeconds(3600))
+        whenever(reminders.findByIdForUpdate(9)).thenReturn(reminder)
+        whenever(currentUser.id()).thenReturn("outsider")
+        whenever(memberships.existsByCourseIdAndStudentUserId(2, "outsider")).thenReturn(false)
+        whenever(notifications.list(9)).thenReturn(emptyList())
+
+        assertThrows(ForbiddenException::class.java) { service.uncomplete(9) }
+    }
+
+    @Test
+    fun `course reminder without completion state cannot be reopened`() {
+        val course = Course(id = 2, name = "Architecture", joinCode = "ARC-12345", professorUserId = "professor-1")
+        val reminder = Reminder(id = 9, course = course, createdByUserId = "professor-1", title = "Review", type = ReminderType.TASK, dueAt = Instant.now().plusSeconds(3600))
+        whenever(reminders.findByIdForUpdate(9)).thenReturn(reminder)
+        whenever(currentUser.id()).thenReturn("student-1")
+        whenever(memberships.existsByCourseIdAndStudentUserId(2, "student-1")).thenReturn(true)
+        whenever(states.findByReminderIdAndStudentUserId(9, "student-1")).thenReturn(null)
+        whenever(notifications.list(9)).thenReturn(emptyList())
+
+        assertThrows(com.puce.reminder.exception.ConflictException::class.java) { service.uncomplete(9) }
+    }
+
+    @Test
+    fun `course reminder with pending state cannot be reopened`() {
+        val course = Course(id = 2, name = "Architecture", joinCode = "ARC-12345", professorUserId = "professor-1")
+        val reminder = Reminder(id = 9, course = course, createdByUserId = "professor-1", title = "Review", type = ReminderType.TASK, dueAt = Instant.now().plusSeconds(3600))
+        val state = StudentReminderState(id = 12, reminder = reminder, studentUserId = "student-1", completedAt = null)
+        whenever(reminders.findByIdForUpdate(9)).thenReturn(reminder)
+        whenever(currentUser.id()).thenReturn("student-1")
+        whenever(memberships.existsByCourseIdAndStudentUserId(2, "student-1")).thenReturn(true)
+        whenever(states.findByReminderIdAndStudentUserId(9, "student-1")).thenReturn(state)
+        whenever(notifications.list(9)).thenReturn(emptyList())
+
+        assertThrows(com.puce.reminder.exception.ConflictException::class.java) { service.uncomplete(9) }
     }
 
     @Test
@@ -124,7 +228,7 @@ class ReminderServiceTest {
         val course = Course(id = 2, name = "Architecture", joinCode = "ARC-12345", professorUserId = "professor-1")
         val reminder = Reminder(id = 9, course = course, createdByUserId = "professor-1", title = "Review", type = ReminderType.TASK, dueAt = Instant.now().plusSeconds(3600))
         var savedState: StudentReminderState? = null
-        whenever(reminders.findById(9)).thenReturn(Optional.of(reminder))
+        whenever(reminders.findByIdForUpdate(9)).thenReturn(reminder)
         whenever(currentUser.id()).thenReturn("student-1")
         whenever(memberships.existsByCourseIdAndStudentUserId(2, "student-1")).thenReturn(true)
         whenever(states.findByReminderIdAndStudentUserId(9, "student-1")).thenAnswer { savedState }
@@ -143,7 +247,7 @@ class ReminderServiceTest {
     fun `non member cannot complete course reminder`() {
         val course = Course(id = 2, name = "Architecture", joinCode = "ARC-12345", professorUserId = "professor-1")
         val reminder = Reminder(id = 9, course = course, createdByUserId = "professor-1", title = "Review", type = ReminderType.TASK, dueAt = Instant.now().plusSeconds(3600))
-        whenever(reminders.findById(9)).thenReturn(Optional.of(reminder))
+        whenever(reminders.findByIdForUpdate(9)).thenReturn(reminder)
         whenever(currentUser.id()).thenReturn("outsider")
         whenever(memberships.existsByCourseIdAndStudentUserId(2, "outsider")).thenReturn(false)
         assertThrows(ForbiddenException::class.java) { service.complete(9) }
@@ -152,7 +256,7 @@ class ReminderServiceTest {
     @Test
     fun `non owner cannot complete personal reminder`() {
         val reminder = Reminder(id = 8, ownerUserId = "student-1", createdByUserId = "student-1", title = "Review", type = ReminderType.TASK, dueAt = Instant.now().plusSeconds(3600))
-        whenever(reminders.findById(8)).thenReturn(Optional.of(reminder))
+        whenever(reminders.findByIdForUpdate(8)).thenReturn(reminder)
         whenever(currentUser.id()).thenReturn("student-2")
         assertThrows(ForbiddenException::class.java) { service.complete(8) }
     }

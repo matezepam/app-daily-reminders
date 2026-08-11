@@ -7,24 +7,24 @@
 3. Integración de contrato: colección Postman/Newman contra la URL HTTPS real.
 4. Smoke test: salud de ambos microservicios, carga de CloudFront y ausencia de errores de consola.
 
-## Resultado verificado el 10-08-2026
+## Resultado verificado el 11-08-2026
 
 | Verificación | Resultado |
 |---|---:|
-| Pruebas `academic-reminder` | 109 aprobadas |
-| Pruebas `users` | 38 aprobadas |
-| Total backend | 147 aprobadas; 0 fallos; 0 omitidas |
+| Pruebas `academic-reminder` | 127 aprobadas |
+| Pruebas `users` | 39 aprobadas |
+| Total backend | 166 aprobadas; 0 fallos; 0 omitidas |
 | Lambda de registro Cognito | 3 aprobadas; `ADMIN`, valor inválido y recuperación |
-| Total automatizado unitario | 150 aprobadas; 0 fallos |
+| Total automatizado unitario | 169 aprobadas; 0 fallos |
 | Cobertura de líneas JaCoCo | 100% en ambos módulos |
-| Cobertura de ramas | 78,86% académica; 82,61% usuarios |
-| Newman contra AWS | 53 solicitudes; 106 aserciones; 0 fallos |
+| Cobertura de ramas | 79,37% académica; 83,33% usuarios |
+| Newman contra AWS | 59 solicitudes automatizadas; 118 aserciones; 0 fallos; 1 caso manual de resiliencia |
 | HTTP 500 en Newman | 0 |
 | Eventos `ERROR`/`Exception` en CloudWatch durante la corrida | 0 / 0 |
 | Frontend | TypeScript, lint y export web aprobados |
-| CloudFront | `index.html` y bundle JavaScript HTTP 200 |
+| CloudFront | Web 1.1.0: `index.html` y `entry-3225db8c6a03a566aa9524845089ae02.js` HTTP 200 |
 | Referencias de backend local en bundle público | 0 |
-| APK Android | EAS `FINISHED`; firma v2 válida; CloudFront 200; SHA-256 verificado |
+| APK Android | EAS 1.1.0/versionCode 2 `FINISHED`; paquete, firma v2, hash, AWS y ausencia de URLs locales verificados |
 
 ## Dependencias del frontend
 
@@ -70,6 +70,38 @@ Distribución deliberada de estados de la corrida Newman:
 
 Los 4xx forman parte de casos negativos explícitos: entrada inválida, falta de token, rol incorrecto, recurso inexistente y duplicados. Una API correcta debe rechazarlos con el código de negocio adecuado, no convertirlos en 500.
 
+## Validación local de la versión 1.1.0 — 11-08-2026
+
+| Verificación | Resultado |
+|---|---:|
+| Pruebas `academic-reminder` | 127 aprobadas; 0 fallos; 0 omitidas |
+| Pruebas `users` | 39 aprobadas; 0 fallos; 0 omitidas |
+| Total backend | 166 aprobadas |
+| Lambda de registro Cognito | 3 aprobadas |
+| Total automatizado backend/Lambda | 169 aprobadas |
+| Cobertura de líneas JaCoCo | 100% en ambos módulos (`669/669` y `165/165`) |
+| Cobertura de ramas | 79,37% académica; 83,33% usuarios |
+| Frontend | TypeScript, lint y export web aprobados |
+| Docker Desktop | 7 servicios persistentes saludables; 2 trabajos SQL terminaron con código 0 |
+| Persistencia después de dos rebuilds | Conteos idénticos: 4 usuarios, 2 cursos, 3 actividades, 2 finalizaciones, 6 recordatorios y 2 asistencias |
+| Logs posteriores al rebuild | 0 líneas `ERROR`/`FATAL`, 0 respuestas 500 |
+| Colección Postman contra AWS | 59 solicitudes automáticas; 118 aserciones; 0 fallos; 0 respuestas 500 |
+| Caso de resiliencia 503 | 1 solicitud manual, desactivada en la corrida normal para no interrumpir producción |
+| Salud pública posterior | `users=UP`; `academic-reminder=UP` desde una computadora externa a AWS |
+| CloudWatch posterior | 0 líneas `ERROR`/`FATAL`; 0 respuestas HTTP 500 en la ventana comprobada |
+| Limpieza posterior a Postman | Cuentas Cognito y filas sintéticas eliminadas; datos reales preservados |
+
+Prueba visual autenticada local de la versión 1.1.0:
+
+- calendario y reloj web reales (`input type=date/time`), además del selector nativo Android;
+- pestaña global Historial para actividades y recordatorios;
+- recordatorio temporal completado con fecha exacta, reapertura exitosa y salida inmediata del historial;
+- reproducción del conflicto de notificaciones al reabrir, corrección mediante `delete + flush + insert` transaccional y repetición sin error;
+- dato temporal eliminado al finalizar la prueba;
+- centro de avisos interno accesible desde la campana, sin permisos ni alarmas del sistema operativo.
+- repetición de dos solicitudes simultáneas para deshacer un recordatorio: un `200`, un `409` controlado y cero `ERROR`/`5xx`; el backend serializa la transición con bloqueo pesimista y la interfaz deshabilita el botón durante la operación.
+- recordatorio temporal, avisos y 5 filas de auditoría eliminados al terminar; residuos verificados en cero.
+
 ## Ejecución reproducible
 
 ```powershell
@@ -99,6 +131,8 @@ Newman usa `postman/academic-reminder.postman_collection.json`. El ambiente de e
 - Acceso cruzado entre profesores queda bloqueado.
 - Actividad visible inicia en 1 para cada profesor.
 - Edición y finalización conservan historial.
+- Deshacer una finalización restaura avisos futuros sin crear duplicados.
+- El profesor propietario recibe `completionCount` y la lista de entregas; el estudiante no recibe datos de compañeros.
 - Fechas y campos inválidos producen 400 con `fieldErrors`.
 - Recurso inexistente produce 404.
 - Cada respuesta de la colección afirma explícitamente `status !== 500`.

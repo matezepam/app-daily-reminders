@@ -5,6 +5,7 @@ import com.puce.reminder.config.CurrentUser
 import com.puce.reminder.dto.*
 import com.puce.reminder.entity.*
 import com.puce.reminder.exception.BadRequestException
+import com.puce.reminder.exception.ConflictException
 import com.puce.reminder.exception.ForbiddenException
 import com.puce.reminder.exception.NotFoundException
 import com.puce.reminder.mapper.PriorityCategoryMapper
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service
 import org.slf4j.LoggerFactory
 import org.springframework.transaction.annotation.Transactional
 import java.time.Instant
+import java.time.Duration
 import java.time.ZoneId
 import java.time.temporal.TemporalAdjusters
 
@@ -105,7 +107,7 @@ class ReminderService(
 
     @Transactional
     fun complete(id: Long): ReminderResponse {
-        val reminder = find(id)
+        val reminder = findForUpdate(id)
         access.requireCanView(reminder)
         val userId = currentUser.id()
         if (reminder.course == null) {
@@ -124,6 +126,40 @@ class ReminderService(
         notificationService.cancelFuture(id, userId)
         audit.record(userId, "UPDATE", "Reminder", id, current = "{\"status\":\"COMPLETED\"}")
         log.info("event=reminder.completed | msg=Reminder completed | reminderId={}", id)
+        return toResponse(reminder, userId, includeNotifications = true)
+    }
+
+    @Transactional
+    fun uncomplete(id: Long): ReminderResponse {
+        val reminder = findForUpdate(id)
+        access.requireCanView(reminder)
+        val userId = currentUser.id()
+        if (!reminder.dueAt.isAfter(Instant.now())) {
+            throw BadRequestException("An expired reminder cannot be reopened")
+        }
+        if (reminder.course == null) {
+            if (reminder.ownerUserId != userId) throw ForbiddenException("Only the reminder owner can reopen it")
+            if (reminder.status != ReminderStatus.COMPLETED) throw ConflictException("Reminder is not completed")
+            reminder.status = ReminderStatus.PENDING
+            reminder.updatedAt = Instant.now()
+            reminders.save(reminder)
+        } else {
+            if (!memberships.existsByCourseIdAndStudentUserId(reminder.course!!.id!!, userId)) {
+                throw ForbiddenException("Only an enrolled student can reopen this reminder")
+            }
+            val state = states.findByReminderIdAndStudentUserId(id, userId)
+                ?: throw ConflictException("Reminder is not completed")
+            if (state.completedAt == null) throw ConflictException("Reminder is not completed")
+            state.completedAt = null
+            states.save(state)
+        }
+        val offsets = notificationService.list(id)
+            .map { Duration.between(it.notifyAt, reminder.dueAt).toMinutes() }
+            .filter { it > 0 }
+            .toSet()
+        notificationService.replaceFor(reminder, userId, offsets)
+        audit.record(userId, "UPDATE", "Reminder", id, current = "{\"status\":\"PENDING\"}")
+        log.info("event=reminder.reopened | msg=Reminder completion reverted | reminderId={}", id)
         return toResponse(reminder, userId, includeNotifications = true)
     }
 
@@ -172,6 +208,9 @@ class ReminderService(
 
     private fun find(id: Long) = reminders.findById(id).orElseThrow { NotFoundException("Reminder not found") }
 
+    private fun findForUpdate(id: Long) = reminders.findByIdForUpdate(id)
+        ?: throw NotFoundException("Reminder not found")
+
     private fun ownedCategory(id: Long, userId: String) = categories.findByIdAndOwnerUserId(id, userId)
         ?: throw NotFoundException("Priority category not found")
 
@@ -200,11 +239,14 @@ class ReminderService(
             else -> reminder.status
         }
         val category = (state?.priorityCategory ?: reminder.priorityCategory)?.let(categoryMapper::toResponse)
+        val completedAt = state?.completedAt
+            ?: reminder.updatedAt.takeIf { reminder.course == null && reminder.status == ReminderStatus.COMPLETED }
         return mapper.toResponse(
             reminder = reminder,
             status = effectiveStatus,
             category = category,
             editable = reminder.ownerUserId == userId || reminder.course?.professorUserId == userId,
+            completedAt = completedAt,
             notifications = if (includeNotifications) notificationService.list(reminder.id!!) else emptyList(),
         )
     }

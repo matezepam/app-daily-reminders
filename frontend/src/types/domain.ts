@@ -45,6 +45,7 @@ export type Reminder = {
   status: ReminderStatus;
   editable: boolean;
   createdAt: string;
+  completedAt?: string | null;
   notifications: ReminderNotification[];
 };
 export type ReminderInput = {
@@ -72,8 +73,14 @@ export type Activity = {
   createdByUserId: string;
   completed: boolean;
   completedAt?: string | null;
+  completionCount: number;
+  completions: ActivityCompletion[];
   createdAt: string;
   updatedAt: string;
+};
+export type ActivityCompletion = {
+  studentUserId: string;
+  completedAt: string;
 };
 export type ActivityInput = {
   title: string;

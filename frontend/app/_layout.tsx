@@ -44,6 +44,7 @@ function RootNavigator() {
         <Stack.Screen name="activity/new" />
         <Stack.Screen name="categories" />
         <Stack.Screen name="attendance/[courseId]" />
+        <Stack.Screen name="notifications" />
       </Stack.Protected>
     </Stack>
   );

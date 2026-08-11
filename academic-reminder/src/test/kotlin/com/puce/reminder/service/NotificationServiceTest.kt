@@ -41,7 +41,11 @@ class NotificationServiceTest {
         whenever(repository.saveAll(any<List<Notification>>())).thenAnswer { invocation -> invocation.getArgument<List<Notification>>(0).onEachIndexed { index, n -> n.id = index + 1L } }
         val result = service.replaceFor(reminder, "student-1", setOf(60, 120))
         assertEquals(2, result.size)
-        verify(repository).deleteAllByReminderIdAndTargetUserId(1, "student-1")
+        inOrder(repository) {
+            verify(repository).deleteAllByReminderIdAndTargetUserId(1, "student-1")
+            verify(repository).flush()
+            verify(repository).saveAll(any<List<Notification>>())
+        }
     }
 
     @Test

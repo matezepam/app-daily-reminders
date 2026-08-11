@@ -56,6 +56,7 @@ data class ReminderResponse(
     val status: ReminderStatus,
     val editable: Boolean,
     val createdAt: Instant,
+    val completedAt: Instant? = null,
     val notifications: List<NotificationResponse> = emptyList(),
 )
 
@@ -78,6 +79,13 @@ data class ActivityResponse(
     val updatedAt: Instant,
     val activityNumber: Long = id,
     val completedAt: Instant? = null,
+    val completionCount: Int = 0,
+    val completions: List<ActivityCompletionResponse> = emptyList(),
+)
+
+data class ActivityCompletionResponse(
+    val studentUserId: String,
+    val completedAt: Instant,
 )
 
 data class AttendanceResponse(

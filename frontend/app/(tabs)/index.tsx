@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Brand } from "@/src/components/Brand";
 import { Card, Empty, Screen, SectionTitle } from "@/src/components/Ui";
@@ -13,17 +13,33 @@ export default function Home() {
   const pending = dashboard.reminders
     .filter((x) => x.status === "PENDING")
     .slice(0, 6);
+  const upcomingNotifications = dashboard.reminders.reduce(
+    (count, reminder) =>
+      count +
+      reminder.notifications.filter(
+        (notification) =>
+          !notification.cancelled &&
+          !notification.sent &&
+          new Date(notification.notifyAt).getTime() > Date.now(),
+      ).length,
+    0,
+  );
   return (
     <Screen refreshing={loading} onRefresh={refresh}>
       <View style={s.top}>
         <Brand compact />
-        <Pressable style={s.bell}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`${upcomingNotifications} avisos programados`}
+          onPress={() => router.push("/notifications" as Href)}
+          style={s.bell}
+        >
           <Ionicons
             name="notifications-outline"
             size={24}
             color={colors.navy}
           />
-          {dashboard.pendingToday > 0 && <View style={s.dot} />}
+          {upcomingNotifications > 0 && <View style={s.dot} />}
         </Pressable>
       </View>
       <View>

@@ -51,6 +51,7 @@ class NotificationService(
         val now = Instant.now()
         if (!reminder.dueAt.isAfter(now)) throw BadRequestException("Notifications cannot be scheduled for an expired reminder")
         repository.deleteAllByReminderIdAndTargetUserId(reminder.id!!, userId)
+        repository.flush()
         val created = offsetsMinutes.distinct().sortedDescending().mapNotNull { offset ->
             val notifyAt = reminder.dueAt.minus(offset, ChronoUnit.MINUTES)
             if (notifyAt.isAfter(now)) Notification(reminder = reminder, targetUserId = userId, notifyAt = notifyAt) else null
