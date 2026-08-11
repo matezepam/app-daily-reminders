@@ -5,18 +5,33 @@ import { StyleSheet, Text, View } from "react-native";
 import {
   Button,
   Card,
+  Empty,
   Field,
   Header,
   Message,
   Screen,
 } from "@/src/components/Ui";
+import { useAuth } from "@/src/context/AuthContext";
 import { useData } from "@/src/context/DataContext";
 import { colors } from "@/src/theme";
 export default function Join() {
+  const { session } = useAuth();
   const { joinCourse } = useData();
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  if (session?.profile.role !== "STUDENT") {
+    return (
+      <Screen>
+        <Header title="Unirme a una clase" back={() => router.back()} />
+        <Empty
+          icon="lock-closed-outline"
+          title="Disponible para estudiantes"
+          detail="Como profesor puedes crear y administrar tus propias clases."
+        />
+      </Screen>
+    );
+  }
   async function submit() {
     if (!code.trim()) {
       setError("Ingresa el código de la clase.");

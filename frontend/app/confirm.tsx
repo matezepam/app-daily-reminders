@@ -12,13 +12,14 @@ export default function Confirm() {
   );
   const [busy, setBusy] = useState(false);
   async function submit() {
-    if (!email.trim() || !code.trim()) {
-      setMsg("Ingresa el correo y el código.");
+    const normalized = email.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(normalized) || !/^\d{6}$/.test(code.trim())) {
+      setMsg("Ingresa un correo válido y el código de 6 dígitos.");
       return;
     }
     setBusy(true);
     try {
-      await confirmSignUp(email.trim().toLowerCase(), code.trim());
+      await confirmSignUp(normalized, code.trim());
       setMsg("Cuenta confirmada. Ya puedes iniciar sesión.");
       setTimeout(() => router.replace("/"), 900);
     } catch (e) {
@@ -28,8 +29,13 @@ export default function Confirm() {
     }
   }
   async function resend() {
+    const normalized = email.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(normalized)) {
+      setMsg("Ingresa un correo electrónico válido.");
+      return;
+    }
     try {
-      await resendConfirmation(email.trim().toLowerCase());
+      await resendConfirmation(normalized);
       setMsg("Código reenviado. Revisa también spam.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "No se pudo reenviar.");

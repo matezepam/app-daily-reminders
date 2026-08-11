@@ -64,12 +64,14 @@ export type Dashboard = {
 };
 export type Activity = {
   id: number;
+  activityNumber: number;
   courseId: number;
   title: string;
   description?: string | null;
   dueAt: string;
   createdByUserId: string;
   completed: boolean;
+  completedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };

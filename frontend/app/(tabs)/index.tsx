@@ -9,7 +9,7 @@ import { colors, priorityMeta, shadow, typeMeta } from "@/src/theme";
 export default function Home() {
   const { session } = useAuth();
   const { dashboard, courses, loading, refresh } = useData();
-  const professor = session?.profile.role !== "USER";
+  const professor = session?.profile.role === "ADMIN";
   const pending = dashboard.reminders
     .filter((x) => x.status === "PENDING")
     .slice(0, 6);
@@ -32,7 +32,7 @@ export default function Home() {
         </Text>
         <Text style={s.subtitle}>
           {professor
-            ? "Gestiona tus cursos y fechas importantes."
+            ? "Gestiona tus clases y recordatorios desde un solo lugar."
             : "Tu día académico, siempre organizado."}
         </Text>
       </View>
@@ -57,17 +57,22 @@ export default function Home() {
           />
         </View>
       </Card>
-      <View style={s.quickRow}>
+      <View style={s.actionStack}>
         <Quick
-          icon={professor ? "add-circle-outline" : "alarm-outline"}
-          label={professor ? "Crear curso" : "Recordatorio"}
-          onPress={() =>
-            router.push(professor ? "/course/new" : "/reminder/new")
-          }
+          primary
+          icon="alarm-outline"
+          label="Nuevo recordatorio"
+          detail="Personal y solo visible para ti"
+          onPress={() => router.push("/reminder/new")}
         />
         <Quick
-          icon={professor ? "megaphone-outline" : "enter-outline"}
-          label={professor ? "Publicar" : "Unirme"}
+          icon={professor ? "add-circle-outline" : "enter-outline"}
+          label={professor ? "Crear una clase" : "Unirme a una clase"}
+          detail={
+            professor
+              ? "Genera un código para tus estudiantes"
+              : "Ingresa el código de tu profesor"
+          }
           onPress={() =>
             router.push(professor ? "/course/new" : "/course/join")
           }
@@ -110,7 +115,7 @@ export default function Home() {
         </>
       )}
       <SectionTitle>
-        {professor ? "Próximas fechas" : "Tus próximos recordatorios"}
+        Próximos recordatorios
       </SectionTitle>
       {pending.length ? (
         pending.map((r) => (
@@ -123,15 +128,9 @@ export default function Home() {
       ) : (
         <Empty
           title="Todo al día"
-          detail="No tienes entregas pendientes por ahora."
+          detail="Crea un recordatorio cuando tengas una nueva fecha importante."
         />
       )}
-      <Pressable
-        style={s.fab}
-        onPress={() => router.push(professor ? "/course/new" : "/reminder/new")}
-      >
-        <Ionicons name="add" size={34} color="white" />
-      </Pressable>
     </Screen>
   );
 }
@@ -157,22 +156,39 @@ function Metric({
 function Quick({
   icon,
   label,
+  detail,
   onPress,
+  primary = false,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
+  detail: string;
   onPress: () => void;
+  primary?: boolean;
 }) {
   return (
     <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={label}
       onPress={onPress}
-      style={({ pressed }) => [s.quick, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => [
+        s.quick,
+        primary && s.quickPrimary,
+        pressed && { opacity: 0.78 },
+      ]}
     >
-      <View style={s.quickIcon}>
-        <Ionicons name={icon} size={24} color={colors.blue} />
+      <View style={[s.quickIcon, primary && s.quickIconPrimary]}>
+        <Ionicons name={icon} size={25} color={primary ? "white" : colors.blue} />
       </View>
-      <Text style={s.quickText}>{label}</Text>
-      <Ionicons name="chevron-forward" size={18} color={colors.muted} />
+      <View style={s.quickCopy}>
+        <Text style={[s.quickText, primary && s.quickTextPrimary]}>{label}</Text>
+        <Text style={[s.quickDetail, primary && s.quickDetailPrimary]}>{detail}</Text>
+      </View>
+      <Ionicons
+        name="chevron-forward"
+        size={20}
+        color={primary ? "white" : colors.muted}
+      />
     </Pressable>
   );
 }
@@ -253,27 +269,33 @@ const s = StyleSheet.create({
   },
   metricValue: { fontSize: 25, fontWeight: "900", color: colors.navy },
   metricLabel: { fontSize: 11, color: colors.muted },
-  quickRow: { flexDirection: "row", gap: 11 },
+  actionStack: { gap: 11 },
   quick: {
-    flex: 1,
-    minHeight: 76,
+    minHeight: 82,
     backgroundColor: "white",
-    borderRadius: 18,
-    padding: 12,
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    paddingVertical: 13,
     flexDirection: "row",
     alignItems: "center",
-    gap: 9,
+    gap: 12,
     ...shadow,
   },
+  quickPrimary: { backgroundColor: colors.blue },
   quickIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     backgroundColor: colors.blueSoft,
     alignItems: "center",
     justifyContent: "center",
   },
-  quickText: { flex: 1, color: colors.navy, fontWeight: "800", fontSize: 13 },
+  quickIconPrimary: { backgroundColor: "rgba(255,255,255,0.18)" },
+  quickCopy: { flex: 1, gap: 3 },
+  quickText: { color: colors.navy, fontWeight: "900", fontSize: 15 },
+  quickTextPrimary: { color: "white" },
+  quickDetail: { color: colors.muted, fontSize: 12, lineHeight: 16 },
+  quickDetailPrimary: { color: "#DCEAFF" },
   course: {
     width: 210,
     backgroundColor: "white",
@@ -321,20 +343,4 @@ const s = StyleSheet.create({
     gap: 5,
   },
   priorityDot: { width: 6, height: 6, borderRadius: 3 },
-  fab: {
-    position: "absolute",
-    right: 22,
-    bottom: 26,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: colors.blue,
-    alignItems: "center",
-    justifyContent: "center",
-    elevation: 8,
-    shadowColor: colors.blue,
-    shadowOpacity: 0.35,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 7 },
-  },
 });

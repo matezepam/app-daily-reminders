@@ -8,7 +8,7 @@ import { colors, shadow } from "@/src/theme";
 export default function Courses() {
   const { session } = useAuth();
   const { courses, loading, refresh } = useData();
-  const professor = session?.profile.role !== "USER";
+  const professor = session?.profile.role === "ADMIN";
   return (
     <Screen refreshing={loading} onRefresh={refresh}>
       <Header

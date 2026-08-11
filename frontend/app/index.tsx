@@ -12,6 +12,7 @@ import { Brand } from "@/src/components/Brand";
 import { Button, Card, Field, Screen } from "@/src/components/Ui";
 import { useAuth } from "@/src/context/AuthContext";
 import { colors } from "@/src/theme";
+import type { RegistrationRole } from "@/src/types/auth";
 type Mode = "login" | "register" | "confirm";
 export default function Access() {
   const { session, initializing, signIn, error, clearError } = useAuth();
@@ -19,6 +20,7 @@ export default function Access() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState<RegistrationRole>("STUDENT");
   const [code, setCode] = useState("");
   const [notice, setNotice] = useState("");
   const [validation, setValidation] = useState("");
@@ -69,9 +71,14 @@ export default function Access() {
     try {
       if (mode === "login") await signIn(normalized, password);
       else if (mode === "register") {
-        await signUp(normalized, password, name.trim());
-        setMode("confirm");
-        setNotice(`Enviamos un código a ${normalized}.`);
+        const result = await signUp(normalized, password, name.trim(), role);
+        if (result.UserConfirmed) {
+          setNotice("Cuenta creada. Iniciando sesión…");
+          await signIn(normalized, password);
+        } else {
+          setMode("confirm");
+          setNotice(`Enviamos un código a ${normalized}.`);
+        }
       } else {
         await confirmSignUp(normalized, code.trim());
         setNotice("Cuenta confirmada. Iniciando sesión…");
@@ -190,11 +197,48 @@ export default function Access() {
             />
             <View>
               <Text style={s.label}>Tipo de cuenta</Text>
-              <View style={s.studentRole}>
-                <Text style={s.studentText}>Estudiante</Text>
+              <View style={s.roleOptions}>
+                <Pressable
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: role === "STUDENT" }}
+                  onPress={() => setRole("STUDENT")}
+                  style={[
+                    s.roleOption,
+                    role === "STUDENT" && s.roleOptionActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      s.roleOptionTitle,
+                      role === "STUDENT" && s.roleOptionTitleActive,
+                    ]}
+                  >
+                    Estudiante
+                  </Text>
+                  <Text style={s.roleOptionText}>Se une a clases</Text>
+                </Pressable>
+                <Pressable
+                  accessibilityRole="radio"
+                  accessibilityState={{ checked: role === "ADMIN" }}
+                  onPress={() => setRole("ADMIN")}
+                  style={[
+                    s.roleOption,
+                    role === "ADMIN" && s.roleOptionActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      s.roleOptionTitle,
+                      role === "ADMIN" && s.roleOptionTitleActive,
+                    ]}
+                  >
+                    Profesor
+                  </Text>
+                  <Text style={s.roleOptionText}>Crea y administra clases</Text>
+                </Pressable>
               </View>
               <Text style={s.roleHelp}>
-                Los perfiles de profesor se asignan administrativamente.
+                Ambos tipos de cuenta pueden crear recordatorios personales.
               </Text>
             </View>
           </>
@@ -304,16 +348,30 @@ const s = StyleSheet.create({
     color: colors.text,
     marginBottom: 7,
   },
-  studentRole: {
-    height: 44,
+  roleOptions: { flexDirection: "row", gap: 10 },
+  roleOption: {
+    flex: 1,
+    minHeight: 66,
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: colors.blue,
-    backgroundColor: colors.blueSoft,
+    borderColor: colors.line,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 8,
   },
-  studentText: { color: colors.blue, fontWeight: "900" },
+  roleOptionActive: {
+    borderColor: colors.blue,
+    backgroundColor: colors.blueSoft,
+  },
+  roleOptionTitle: { color: colors.text, fontWeight: "900" },
+  roleOptionTitleActive: { color: colors.blue },
+  roleOptionText: {
+    color: colors.muted,
+    fontSize: 10,
+    textAlign: "center",
+    marginTop: 3,
+  },
   roleHelp: {
     fontSize: 11,
     color: colors.muted,

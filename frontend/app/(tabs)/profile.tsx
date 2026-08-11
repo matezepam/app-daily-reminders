@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { apiRequest } from "@/src/api/client";
 import {
   Button,
   Card,
@@ -14,16 +13,14 @@ import {
 import { useAuth } from "@/src/context/AuthContext";
 import { colors } from "@/src/theme";
 export default function Profile() {
-  const { session, getSession, signOut } = useAuth();
+  const { session, updateProfile, signOut } = useAuth();
   const [name, setName] = useState(session?.profile.fullName ?? "");
   const [msg, setMsg] = useState("");
   const [success, setSuccess] = useState(false);
   async function save() {
     try {
-      await apiRequest(await getSession(), "/users/me", {
-        method: "PUT",
-        body: { fullName: name.trim() },
-      });
+      const updated = await updateProfile(name);
+      setName(updated.fullName);
       setSuccess(true);
       setMsg("Nombre actualizado correctamente.");
     } catch (e) {
@@ -49,7 +46,7 @@ export default function Profile() {
         <View style={s.role}>
           <Ionicons
             name={
-              session?.profile.role === "USER"
+              session?.profile.role === "STUDENT"
                 ? "school-outline"
                 : "briefcase-outline"
             }
@@ -57,11 +54,9 @@ export default function Profile() {
             color={colors.blue}
           />
           <Text style={s.roleText}>
-            {session?.profile.role === "USER"
+            {session?.profile.role === "STUDENT"
               ? "Estudiante"
-              : session?.profile.role === "PROFESSOR"
-                ? "Profesor"
-                : "Administrador"}
+              : "Profesor / administrador"}
           </Text>
         </View>
       </View>
@@ -80,31 +75,29 @@ export default function Profile() {
           onPress={() => void save()}
         />
       </Card>
-      {session?.profile.role === "USER" && (
-        <Card>
-          <View style={s.setting}>
-            <View style={s.settingIcon}>
-              <Ionicons
-                name="color-palette-outline"
-                size={23}
-                color={colors.blue}
-              />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={s.settingTitle}>Prioridades personalizadas</Text>
-              <Text style={s.settingText}>
-                Crea etiquetas y colores para organizarte.
-              </Text>
-            </View>
+      <Card>
+        <View style={s.setting}>
+          <View style={s.settingIcon}>
+            <Ionicons
+              name="color-palette-outline"
+              size={23}
+              color={colors.blue}
+            />
           </View>
-          <Button
-            title="Administrar prioridades"
-            variant="soft"
-            icon="arrow-forward"
-            onPress={() => router.push("/categories")}
-          />
-        </Card>
-      )}
+          <View style={{ flex: 1 }}>
+            <Text style={s.settingTitle}>Prioridades personalizadas</Text>
+            <Text style={s.settingText}>
+              Crea etiquetas y colores para organizar tus recordatorios.
+            </Text>
+          </View>
+        </View>
+        <Button
+          title="Administrar prioridades"
+          variant="soft"
+          icon="arrow-forward"
+          onPress={() => router.push("/categories")}
+        />
+      </Card>
       <Button
         title="Cerrar sesión"
         variant="danger"

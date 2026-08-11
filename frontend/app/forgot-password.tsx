@@ -9,20 +9,34 @@ export default function Forgot() {
   const [password, setPassword] = useState("");
   const [sent, setSent] = useState(false);
   const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
   async function request() {
+    const normalized = email.trim().toLowerCase();
+    if (!/^\S+@\S+\.\S+$/.test(normalized)) {
+      setMsg("Escribe un correo electrónico válido.");
+      return;
+    }
+    setBusy(true);
     try {
-      await forgotPassword(email.trim().toLowerCase());
+      await forgotPassword(normalized);
       setSent(true);
       setMsg("Código enviado a tu correo.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "No se pudo enviar.");
+    } finally {
+      setBusy(false);
     }
   }
   async function confirm() {
-    if (password.length < 8) {
-      setMsg("La contraseña debe tener al menos 8 caracteres.");
+    if (!/^\d{6}$/.test(code.trim())) {
+      setMsg("Ingresa el código de 6 dígitos recibido por correo.");
       return;
     }
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password)) {
+      setMsg("Usa 8 caracteres o más, con mayúscula, minúscula, número y símbolo.");
+      return;
+    }
+    setBusy(true);
     try {
       await confirmForgotPassword(
         email.trim().toLowerCase(),
@@ -33,6 +47,8 @@ export default function Forgot() {
       setTimeout(() => router.replace("/"), 900);
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "No se pudo actualizar.");
+    } finally {
+      setBusy(false);
     }
   }
   return (
@@ -65,6 +81,7 @@ export default function Forgot() {
         <Button
           title={sent ? "Cambiar contraseña" : "Enviar código"}
           icon="key-outline"
+          loading={busy}
           onPress={() => void (sent ? confirm() : request())}
         />
       </Card>

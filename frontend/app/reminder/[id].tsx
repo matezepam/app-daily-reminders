@@ -1,10 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
-import { Alert, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { Button, Card, Empty, Header, Screen } from "@/src/components/Ui";
 import { useAuth } from "@/src/context/AuthContext";
 import { useData } from "@/src/context/DataContext";
 import { colors, priorityMeta, typeMeta } from "@/src/theme";
+import { confirmDestructive } from "@/src/utils/confirm";
 export default function ReminderDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { session } = useAuth();
@@ -29,14 +30,11 @@ export default function ReminderDetail() {
     : priorityMeta[r.priority];
   const type = typeMeta[r.type];
   const remove = () =>
-    Alert.alert("Eliminar recordatorio", "Esta acción no se puede deshacer.", [
-      { text: "Cancelar", style: "cancel" },
-      {
-        text: "Eliminar",
-        style: "destructive",
-        onPress: () => void deleteReminder(r.id).then(() => router.back()),
-      },
-    ]);
+    confirmDestructive({
+      title: "Eliminar recordatorio",
+      message: "Esta acción no se puede deshacer.",
+      onConfirm: () => void deleteReminder(r.id).then(() => router.back()),
+    });
   return (
     <Screen>
       <Header
@@ -85,7 +83,8 @@ export default function ReminderDetail() {
           />
         )}
       </Card>
-      {r.status === "PENDING" && session?.profile.role === "USER" && (
+      {r.status === "PENDING" &&
+        (session?.profile.role === "STUDENT" || r.personal) && (
         <Button
           title="Marcar como completado"
           icon="checkmark-circle-outline"

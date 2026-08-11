@@ -3,6 +3,7 @@ import Constants from "expo-constants";
 import type {
   AuthSession,
   ApiErrorResponse,
+  RegistrationRole,
   UserProfile,
 } from "@/src/types/auth";
 
@@ -18,9 +19,15 @@ export const API_URL = (
   Platform.select({ web: "/api", default: nativeApiUrl })!
 ).replace(/\/$/, "");
 const region = process.env.EXPO_PUBLIC_COGNITO_REGION ?? "us-east-1";
-const clientId =
-  process.env.EXPO_PUBLIC_COGNITO_CLIENT_ID ?? "21jjggihppq5ba7dsk1532eada";
+const clientId = process.env.EXPO_PUBLIC_COGNITO_CLIENT_ID?.trim();
 const cognitoUrl = `https://cognito-idp.${region}.amazonaws.com/`;
+const requireClientId = () => {
+  if (!clientId)
+    throw new ApiClientError(
+      "Falta configurar EXPO_PUBLIC_COGNITO_CLIENT_ID para esta instalación.",
+    );
+  return clientId;
+};
 const cognitoMessage = (message?: string) => {
   if (!message) return "Cognito no pudo completar la solicitud.";
   if (/already exists/i.test(message))
@@ -88,7 +95,7 @@ async function cognito(target: string, body: unknown) {
 export async function authenticate(username: string, password: string) {
   const data = await cognito("InitiateAuth", {
     AuthFlow: "USER_PASSWORD_AUTH",
-    ClientId: clientId,
+    ClientId: requireClientId(),
     AuthParameters: { USERNAME: username, PASSWORD: password },
   });
   return data.AuthenticationResult!;
@@ -97,7 +104,7 @@ export async function authenticate(username: string, password: string) {
 export async function refreshTokens(refreshToken: string) {
   const data = await cognito("InitiateAuth", {
     AuthFlow: "REFRESH_TOKEN_AUTH",
-    ClientId: clientId,
+    ClientId: requireClientId(),
     AuthParameters: { REFRESH_TOKEN: refreshToken },
   });
   return data.AuthenticationResult!;
@@ -107,34 +114,42 @@ export async function signUp(
   email: string,
   password: string,
   fullName: string,
+  role: RegistrationRole,
 ) {
   return cognitoRaw("SignUp", {
-    ClientId: clientId,
+    ClientId: requireClientId(),
     Username: email,
     Password: password,
     UserAttributes: [
       { Name: "email", Value: email },
       { Name: "name", Value: fullName },
+      { Name: "custom:role", Value: role },
     ],
   });
 }
 export const confirmSignUp = (email: string, code: string) =>
   cognitoRaw("ConfirmSignUp", {
-    ClientId: clientId,
+    ClientId: requireClientId(),
     Username: email,
     ConfirmationCode: code,
   });
 export const resendConfirmation = (email: string) =>
-  cognitoRaw("ResendConfirmationCode", { ClientId: clientId, Username: email });
+  cognitoRaw("ResendConfirmationCode", {
+    ClientId: requireClientId(),
+    Username: email,
+  });
 export const forgotPassword = (email: string) =>
-  cognitoRaw("ForgotPassword", { ClientId: clientId, Username: email });
+  cognitoRaw("ForgotPassword", {
+    ClientId: requireClientId(),
+    Username: email,
+  });
 export const confirmForgotPassword = (
   email: string,
   code: string,
   password: string,
 ) =>
   cognitoRaw("ConfirmForgotPassword", {
-    ClientId: clientId,
+    ClientId: requireClientId(),
     Username: email,
     ConfirmationCode: code,
     Password: password,

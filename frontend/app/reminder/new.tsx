@@ -135,6 +135,12 @@ export default function NewReminder() {
         back={() => router.back()}
       />
 
+      <Message type="info">
+        {courseId
+          ? "Este aviso llegará a los estudiantes inscritos en la clase."
+          : "Este recordatorio es personal y solo aparecerá en tu cuenta."}
+      </Message>
+
       <Card>
         <Field
           label="Título"
@@ -311,7 +317,7 @@ export default function NewReminder() {
 
       {error ? <Message>{error}</Message> : null}
       <Button
-        title="Guardar recordatorio"
+        title={courseId ? "Publicar aviso" : "Crear recordatorio"}
         icon="save-outline"
         loading={busy}
         onPress={() => void submit()}

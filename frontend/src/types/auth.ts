@@ -1,4 +1,5 @@
-export type SessionRole = "ADMIN" | "PROFESSOR" | "USER";
+export type SessionRole = "ADMIN" | "STUDENT";
+export type RegistrationRole = SessionRole;
 
 export type UserProfile = {
   id: number;

@@ -1,6 +1,5 @@
-node_modules
 .expo
 dist
-.git
-npm-debug.log
-
+node_modules
+*.log
+*.tsbuildinfo
