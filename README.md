@@ -141,7 +141,8 @@ El TLS debe terminar en el balanceador o proxy público de AWS. Las contraseñas
 ### Entorno AWS activo
 
 - Aplicación web: <https://d29ydq13vz3ryv.cloudfront.net>
-- APK Android: <https://d29ydq13vz3ryv.cloudfront.net/AcademicReminder.apk>
+- Portal de descarga Android: <https://d29ydq13vz3ryv.cloudfront.net/download/index.html>
+- APK Android 1.1.0: <https://d29ydq13vz3ryv.cloudfront.net/download/AcademicReminder.apk>
 - API pública: <https://5d1dvnzh90.execute-api.us-east-1.amazonaws.com>
 - Salud: <https://5d1dvnzh90.execute-api.us-east-1.amazonaws.com/health/users> y <https://5d1dvnzh90.execute-api.us-east-1.amazonaws.com/health/academic-reminder>
 

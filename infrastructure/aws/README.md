@@ -19,11 +19,15 @@ El artefacto esperado por defecto es `releases/current.zip` dentro del bucket cr
 ## Despliegue activo
 
 - Frontend: <https://d29ydq13vz3ryv.cloudfront.net>
+- Portal de descarga: <https://d29ydq13vz3ryv.cloudfront.net/download/index.html>
+- APK Android 1.1.0: <https://d29ydq13vz3ryv.cloudfront.net/download/AcademicReminder.apk>
 - API: <https://5d1dvnzh90.execute-api.us-east-1.amazonaws.com>
 - Salud usuarios: <https://5d1dvnzh90.execute-api.us-east-1.amazonaws.com/health/users>
 - Salud académica: <https://5d1dvnzh90.execute-api.us-east-1.amazonaws.com/health/academic-reminder>
 
 La instancia se administra con Systems Manager y no expone SSH. RDS es privado; por tanto, ni Postman ni la aplicación se conectan directamente a PostgreSQL.
+
+El portal de descarga se publica bajo el prefijo `download/` del bucket existente. `download/index.html` y `download/AcademicReminder.apk` quedan juntos para que los enlaces relativos funcionen, sin reemplazar la aplicación web de la raíz. El APK se sirve con `application/vnd.android.package-archive`, descarga como `AcademicReminder-1.1.0.apk` y conserva versión y SHA-256 en sus metadatos S3.
 
 ## Estado verificado — 11-08-2026
 

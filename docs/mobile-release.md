@@ -60,6 +60,9 @@ También bloquea acciones repetidas mientras una finalización, reapertura o eli
 - Tamaño: `84.353.745` bytes.
 - SHA-256: `264f6cd78bbb35a149b7a4ee29332aa22ad67383f08abf67e5deb75aa50b14b7`.
 - Bundle Android: contiene API Gateway y Cognito de producción; no contiene `localhost:9090` ni `10.0.2.2:9090`.
+- Portal AWS: <https://d29ydq13vz3ryv.cloudfront.net/download/index.html>.
+- Descarga AWS 1.1.0: <https://d29ydq13vz3ryv.cloudfront.net/download/AcademicReminder.apk>.
+- Verificación CloudFront: página HTTP 200 sin errores de consola; APK HTTP 200, 84.353.745 bytes y cabecera `504b0304` válida.
 
 Orden obligatorio solicitado por el usuario:
 
